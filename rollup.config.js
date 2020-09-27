@@ -25,5 +25,11 @@ export default merge(baseConfig, {
 
   // alternatively, you can use your JS as entrypoint for rollup and
   // optionally set a HTML template manually
-  input: './dist/kerk-planning.js'
+  input: './dist/kerk-planning.js',
+
+  // set the filename to a fixed value
+  output: {
+    entryFileNames: '[name].]-min.js',
+    chunkFileNames: '[name].min.js',
+  }
 });

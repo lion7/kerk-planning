@@ -227,7 +227,7 @@ export class KerkPlanning extends LitElement {
     fetch(this.genodigdenUrl, {
       method: 'POST',
       body: JSON.stringify(genodigden)
-    }).then(value => console.log(`Genodigden verstuurd: ${value}`))
+    }).then(value => console.log(`Uitnodigingen verstuurd: ${value}`))
   }
 
   render() {
