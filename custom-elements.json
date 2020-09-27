@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "tags": [
+    {
+      "name": "kerk-planning",
+      "description": "Een component om kerkdiensten mee in te plannen",
+      "properties": [
+        {
+          "name": "title",
+          "type": "String",
+          "description": "The title of your component",
+          "default": "Hey there"
+        },
+        {
+          "name": "counter",
+          "type": "Number",
+          "description": "An action counter",
+          "default": 0
+        }
+      ],
+      "events": [],
+      "slots": [],
+      "cssProperties": []
+    }
+  ]
+}
