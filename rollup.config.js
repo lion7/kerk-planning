@@ -29,7 +29,7 @@ export default merge(baseConfig, {
 
   // set the filename to a fixed value
   output: {
-    entryFileNames: '[name].]-min.js',
+    entryFileNames: '[name].min.js',
     chunkFileNames: '[name].min.js',
   }
 });

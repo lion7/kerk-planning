@@ -86,8 +86,7 @@ export class KerkPlanning extends LitElement {
   @property({type: String}) genodigdenUrl = '';
   @property({type: []}) gebouwen: Gebouw[] = [];
   @property({type: []}) deelnemers: Deelnemer[] = [];
-
-  private gebouwIndex = 0;
+  @property({type: Number}) gebouwIndex = 0;
 
   protected update(changedProperties: PropertyValues) {
     super.update(changedProperties);
@@ -194,17 +193,13 @@ export class KerkPlanning extends LitElement {
       return;
     }
 
-    const gebouw = this.gebouwen[this.gebouwIndex]
-    if (!gebouw) {
-      console.log("Gebouw niet gevonden!");
-      return;
-    }
-
-    gebouw.stoelen.forEach(value => {
-      if (value.deelnemer?.id == deelnemer.id) {
-        value.deelnemer = null;
-      }
-    });
+    this.gebouwen.forEach(gebouw =>
+      gebouw.stoelen.forEach(value => {
+        if (value.deelnemer?.id == deelnemer.id) {
+          value.deelnemer = null;
+        }
+      })
+    );
     this.gebouwen = [...this.gebouwen];
   }
 
@@ -230,14 +225,19 @@ export class KerkPlanning extends LitElement {
     }).then(value => console.log(`Uitnodigingen verstuurd: ${value}`))
   }
 
+  _selecteerGebouw(event: Event) {
+    const el = event.target as HTMLInputElement;
+    this.gebouwIndex = parseInt(el.value);
+  }
+
   render() {
     const gebouw = this.gebouwen[this.gebouwIndex]
     if (!gebouw) {
       console.log("Gebouw niet gevonden!");
       return;
     }
-    const rijen = gebouw.stoelen.reduce((previousValue, currentValue) => previousValue.rij < currentValue.rij ? currentValue : previousValue).rij;
-    const kolommen = gebouw.stoelen.reduce((previousValue, currentValue) => previousValue.kolom < currentValue.kolom ? currentValue : previousValue).kolom;
+    const rijen = gebouw.stoelen.length > 0 ? gebouw.stoelen.reduce((previousValue, currentValue) => previousValue.rij < currentValue.rij ? currentValue : previousValue).rij : 0;
+    const kolommen = gebouw.stoelen.length > 0 ? gebouw.stoelen.reduce((previousValue, currentValue) => previousValue.kolom < currentValue.kolom ? currentValue : previousValue).kolom : 0;
     return html`
       <div id="planning" xmlns="http://www.w3.org/1999/html">
         <table id="deelnemers"
@@ -272,9 +272,9 @@ export class KerkPlanning extends LitElement {
         <div id="view">
           ${this.gebouwen.map(((value, index) => {
       if (index == this.gebouwIndex) {
-        return html`<input type="radio" name="gebouw" value="${index}" checked>${value.naam}</input>`;
+        return html`<input type="radio" name="gebouw" value="${index}" @change="${this._selecteerGebouw}" checked>${value.naam}</input>`;
       } else {
-        return html`<input type="radio" name="gebouw" value="${index}">${value.naam}</input>`;
+        return html`<input type="radio" name="gebouw" value="${index}" @change="${this._selecteerGebouw}">${value.naam}</input>`;
       }
     }))}
           <br/>
@@ -289,7 +289,7 @@ export class KerkPlanning extends LitElement {
                      data-stoel-index="${index}"
                      data-deelnemer-id="${value.deelnemer ? value.deelnemer.id : ''}"
                      title="${value.deelnemer ? value.deelnemer.naam : 'Leeg'}"
-                     style="grid-row: ${value.rij}; grid-column: ${value.kolom}; transform: rotate(${KerkPlanning.rotation(value.richting)}deg)"
+                     style="grid-row: ${value.rij}; grid-column: ${value.kolom}; transform: rotate(${KerkPlanning.rotation(value.richting)})"
                      ondragenter="return ${value.deelnemer != null}"
                      ondragover="return ${value.deelnemer != null}"
                      @dragstart="${this._dragstart}"
@@ -307,17 +307,11 @@ export class KerkPlanning extends LitElement {
   }
 
   private bepaalGenodigden(): Genodigde[] {
-    const gebouw = this.gebouwen[this.gebouwIndex]
-    if (!gebouw) {
-      console.log("Gebouw niet gevonden!");
-      return [];
-    }
-
     const result: Genodigde[] = [];
     this.gebouwen.forEach(gebouw =>
       gebouw.stoelen.forEach(stoel => {
         if (stoel.deelnemer) {
-          const genodigde = KerkPlanning.toGenodigde(stoel.deelnemer, stoel.richting);
+          const genodigde = KerkPlanning.toGenodigde(stoel.deelnemer, KerkPlanning.ingang(gebouw, stoel));
           if (!result.some(g => g.email == genodigde.email)) {
             result.push(genodigde);
           }
@@ -327,19 +321,14 @@ export class KerkPlanning extends LitElement {
   }
 
   private isGenodigde(deelnemer: Deelnemer): boolean {
-    const gebouw = this.gebouwen[this.gebouwIndex]
-    if (!gebouw) {
-      console.log("Gebouw niet gevonden!");
-      return false;
-    }
-    return gebouw.stoelen.findIndex(stoel => deelnemer.id == stoel.deelnemer?.id) != -1;
+    return this.gebouwen.some(gebouw => gebouw.stoelen.some(stoel => deelnemer.id == stoel.deelnemer?.id));
   }
 
-  private static toGenodigde(deelnemer: Deelnemer, richting: Richting): Genodigde {
+  private static toGenodigde(deelnemer: Deelnemer, ingang: string): Genodigde {
     return {
       id: deelnemer.id,
       naam: deelnemer.naam,
-      ingang: KerkPlanning.ingang(richting),
+      ingang: ingang,
       aantal: deelnemer.aantal,
       email: deelnemer.email
     };
@@ -349,33 +338,51 @@ export class KerkPlanning extends LitElement {
     return richting === Richting.Noord || richting === Richting.Zuid;
   }
 
-  private static rotation(richting: Richting): number {
+  private static rotation(richting: Richting): string {
     switch (richting) {
       case Richting.Noord:
-        return 180;
+        return '180deg';
       case Richting.Oost:
-        return 270;
+        return '270deg';
       case Richting.Zuid:
-        return 0;
+        return '0';
       case Richting.West:
-        return 90;
+        return '90deg';
       default:
-        return 0;
+        return '0';
     }
   }
 
-  private static ingang(richting: Richting): string {
-    switch (richting) {
-      case Richting.Noord:
-        return 'onder het orgel';
-      case Richting.Oost:
-        return 'tegenovder de preekstoel';
-      case Richting.Zuid:
-        return 'onder de toren';
-      case Richting.West:
-        return 'vanuit de consistorie';
-      default:
-        return 'onbekend';
+  private static ingang(gebouw: Gebouw, stoel: Stoel): string {
+    if (gebouw.naam.includes("Kerk")) {
+      if (gebouw.naam.includes("gallerij")) {
+        switch (stoel.richting) {
+          case Richting.Noord:
+            return 'onder het orgel';
+          case Richting.Oost:
+            return 'tegenover de preekstoel';
+          case Richting.Zuid:
+            return 'onder de toren';
+          case Richting.West:
+            return 'vanuit de consistorie';
+        }
+      } else {
+        switch (stoel.richting) {
+          case Richting.Noord:
+            return 'galerij naast het orgel';
+          case Richting.Oost:
+            return 'galerij tegenover de preekstoel';
+          case Richting.Zuid:
+            return 'galerij onder de toren';
+        }
+      }
+    } else if (gebouw.naam.includes("Centrum")) {
+      if (stoel.rij < 20) {
+        return 'stuivenbergstraat';
+      } else {
+        return 'fazant';
+      }
     }
+    return 'onbekend';
   }
 }
