@@ -96,19 +96,22 @@ export class KerkPlanning extends LitElement {
   @property({type: String}) deelnemersUrl = '';
   @property({type: String}) gebouwenUrl = '';
   @property({type: String}) genodigdenUrl = '';
+  @property({type: Number}) gebouwIndex = 0;
   @property({type: []}) gebouwen: Gebouw[] = [];
   @property({type: []}) deelnemers: Deelnemer[] = [];
-  @property({type: Number}) gebouwIndex = 0;
 
   protected update(changedProperties: PropertyValues) {
     super.update(changedProperties);
-    if (this.deelnemersUrl && this.deelnemersUrl != '') {
+    if (changedProperties.has('deelnemersUrl') && this.deelnemersUrl && this.deelnemersUrl != '') {
       console.log(`Deelnemers ophalen van ${this.deelnemersUrl}`);
-      fetch(this.deelnemersUrl).then(value => value.json()).then(value => this.deelnemers = value);
+      fetch(this.deelnemersUrl, { mode: "no-cors" }).then(value => value.json()).then(value => this.deelnemers = value);
     }
-    if (this.gebouwenUrl && this.gebouwenUrl != '') {
+    if (changedProperties.has('gebouwenUrl') && this.gebouwenUrl && this.gebouwenUrl != '') {
       console.log(`Gebouwen ophalen van ${this.gebouwenUrl}`);
-      fetch(this.gebouwenUrl).then(value => value.json()).then(value => this.gebouwen = value);
+      fetch(this.gebouwenUrl, { mode: "no-cors" }).then(value => value.json()).then(value => {
+        this.gebouwIndex = 0;
+        this.gebouwen = value;
+      });
     }
   }
 
@@ -367,6 +370,15 @@ export class KerkPlanning extends LitElement {
       if (gebouw.naam.includes("gallerij")) {
         switch (stoel.richting) {
           case Richting.Noord:
+            return gebouwNaam + ' - ingang galerij onder de toren';
+          case Richting.West:
+            return gebouwNaam + ' - ingang galerij tegenover de preekstoel';
+          case Richting.Zuid:
+            return gebouwNaam + ' - ingang galerij bij het orgel';
+        }
+      } else {
+        switch (stoel.richting) {
+          case Richting.Noord:
             return gebouwNaam + ' - ingang onder de toren';
           case Richting.West:
             return gebouwNaam + ' - ingang tegenover de preekstoel';
@@ -374,15 +386,6 @@ export class KerkPlanning extends LitElement {
             return gebouwNaam + ' - ingang onder het orgel';
           case Richting.Oost:
             return gebouwNaam + ' - ingang vanuit de consistorie';
-        }
-      } else {
-        switch (stoel.richting) {
-          case Richting.Noord:
-            return gebouwNaam + ' - ingang galerij onder de toren';
-          case Richting.West:
-            return gebouwNaam + ' - ingang galerij tegenover de preekstoel';
-          case Richting.Zuid:
-            return gebouwNaam + ' - ingang galerij bij het orgel';
         }
       }
     } else if (gebouw.naam.includes("Centrum")) {
