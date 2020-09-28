@@ -58,13 +58,25 @@ export class KerkPlanning extends LitElement {
       position: fixed;
       top: 0;
       right: 0;
-      margin: 1vh;
+      height: 98vh;
+      padding: 1vh;
+    }
+
+    #gebouwen {
+      display: grid;
     }
 
     #gebouw {
       display: grid;
       background-color: #836B32;
-      margin: 1vh;
+    }
+
+    #controls {
+      display: grid;
+      grid-template-columns: repeat(2, 50%);
+      gap: 1vh;
+      height: 4vh;
+      margin-bottom: 1vh;
     }
 
     .deelnemer {
@@ -270,16 +282,12 @@ export class KerkPlanning extends LitElement {
         </table>
 
         <div id="view">
-          ${this.gebouwen.map(((value, index) => {
-      if (index == this.gebouwIndex) {
-        return html`<input type="radio" name="gebouw" value="${index}" @change="${this._selecteerGebouw}" checked>${value.naam}</input>`;
-      } else {
-        return html`<input type="radio" name="gebouw" value="${index}" @change="${this._selecteerGebouw}">${value.naam}</input>`;
-      }
-    }))}
-          <br/>
-          <button @click="${this._downloadLijst}">Lijst downloaden</button>
-          ${this.genodigdenUrl && this.genodigdenUrl != '' ? html`<button @click="${this._verstuurUitnodigingen}">Uitnodigingen versturen</button>` : ''}
+          <div id="controls">
+            <div>Gebouw: <select @change="${this._selecteerGebouw}">${this.gebouwen.map(((value, index) => html`<option value="${index}">${value.naam}</option>`))}</select></div>
+            <div>Aantal stoelen: ${gebouw.stoelen.length}</div>
+            <button @click="${this._downloadLijst}">Lijst downloaden</button>
+            ${this.genodigdenUrl && this.genodigdenUrl != '' ? html`<button @click="${this._verstuurUitnodigingen}">Uitnodigingen versturen</button>` : ''}
+          </div>
           <div id="gebouw" style="grid-template-rows: repeat(${rijen}, calc(93vh / ${rijen}));
                                    grid-template-columns: repeat(${kolommen}, calc(93vh / ${rijen}));">
             ${gebouw.stoelen.map((value, index) => html`
@@ -354,33 +362,34 @@ export class KerkPlanning extends LitElement {
   }
 
   private static ingang(gebouw: Gebouw, stoel: Stoel): string {
+    const gebouwNaam = gebouw.naam.includes('(') ? gebouw.naam.substring(0, gebouw.naam.indexOf('(')) : gebouw.naam;
     if (gebouw.naam.includes("Kerk")) {
       if (gebouw.naam.includes("gallerij")) {
         switch (stoel.richting) {
           case Richting.Noord:
-            return 'onder het orgel';
-          case Richting.Oost:
-            return 'tegenover de preekstoel';
-          case Richting.Zuid:
-            return 'onder de toren';
+            return gebouwNaam + ' - ingang onder de toren';
           case Richting.West:
-            return 'vanuit de consistorie';
+            return gebouwNaam + ' - ingang tegenover de preekstoel';
+          case Richting.Zuid:
+            return gebouwNaam + ' - ingang onder het orgel';
+          case Richting.Oost:
+            return gebouwNaam + ' - ingang vanuit de consistorie';
         }
       } else {
         switch (stoel.richting) {
           case Richting.Noord:
-            return 'galerij naast het orgel';
-          case Richting.Oost:
-            return 'galerij tegenover de preekstoel';
+            return gebouwNaam + ' - ingang galerij onder de toren';
+          case Richting.West:
+            return gebouwNaam + ' - ingang galerij tegenover de preekstoel';
           case Richting.Zuid:
-            return 'galerij onder de toren';
+            return gebouwNaam + ' - ingang galerij bij het orgel';
         }
       }
     } else if (gebouw.naam.includes("Centrum")) {
       if (stoel.rij < 20) {
-        return 'stuivenbergstraat';
+        return gebouwNaam + ' - ingang stuivenbergstraat';
       } else {
-        return 'fazant';
+        return gebouwNaam + ' - ingang fazant';
       }
     }
     return 'onbekend';
