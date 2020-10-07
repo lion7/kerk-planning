@@ -1,10 +1,13 @@
-  {
+{
   "compilerOptions": {
     "target": "es2018",
     "module": "esnext",
     "moduleResolution": "node",
     "noEmitOnError": true,
-    "lib": ["es2017", "dom"],
+    "lib": [
+      "es2017",
+      "dom"
+    ],
     "strict": true,
     "esModuleInterop": false,
     "allowSyntheticDefaultImports": true,
@@ -13,7 +16,13 @@
     "outDir": "dist",
     "sourceMap": true,
     "inlineSources": true,
-    "rootDir": "./"
+    "rootDir": "./",
+    "skipLibCheck": true
   },
-  "include": ["**/*.ts"]
+  "include": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "src/gas/**/*.ts"
+  ]
 }

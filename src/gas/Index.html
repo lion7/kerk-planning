@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>
+    <script type="module">
+    </script>
+    <kerk-planning></kerk-planning>
+    <script>
+        var kp = document.querySelector('kerk-planning');
+        google.script.run.withSuccessHandler(result => { console.log(JSON.stringify(result)); kp.gebouwen = result; }).getGebouwen();
+        google.script.run.withSuccessHandler(result => { console.log(JSON.stringify(result)); kp.deelnemers = result; }).getDeelnemers();
+        kp.uitnodigen = genodigden => { google.script.run.uitnodigen(genodigden); };
+    </script>
+  </body>
+</html>

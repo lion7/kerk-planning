@@ -7,6 +7,12 @@ This webcomponent follows the [open-wc](https://github.com/open-wc/open-wc) reco
 npm i kerk-planning
 ```
 
+## Deployment
+```bash
+npm run build
+clasp push
+```
+
 ## Usage
 ```html
 <script type="module">
