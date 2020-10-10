@@ -1,5 +1,5 @@
 import AppsScriptHttpRequestEvent = GoogleAppsScript.Events.AppsScriptHttpRequestEvent;
-import {Beschikbaarheid, Deelnemer, Gebouw, Genodigde, Ingang, Prop, Richting, Stoel} from "../common/Model";
+import {Beschikbaarheid, Deelnemer, Gebouw, Ingang, Planning, Prop, Richting, Stoel, Tijdvak} from "../common/Model";
 
 interface GebouwIngang extends Ingang {
   gebouw: string;
@@ -9,8 +9,97 @@ function doGet(request: AppsScriptHttpRequestEvent) {
   return HtmlService.createTemplateFromFile('dist/Index').evaluate();
 }
 
-function uitnodigen(genodigden: Genodigde[]) {
-  Logger.log(genodigden)
+function uitnodigen(planning: Planning) {
+  Logger.log(JSON.stringify(planning));
+
+  const calendar = CalendarApp.getDefaultCalendar();
+  const startTijd = new Date(planning.datum);
+  const eindTijd = new Date(planning.datum);
+  switch (planning.tijdvak) {
+    case Tijdvak.Ochtend:
+      startTijd.setHours(9, 10, 0, 0);
+      eindTijd.setHours(11, 0, 0, 0);
+      break;
+    case Tijdvak.Middag:
+      startTijd.setHours(15, 10, 0, 0);
+      eindTijd.setHours(17, 0, 0, 0);
+      break;
+    case Tijdvak.Avond:
+      startTijd.setHours(18, 40, 0, 0);
+      eindTijd.setHours(20, 30, 0, 0);
+      break;
+  }
+
+  const dienst = `${planning.tijdvak.toLowerCase()}dienst`;
+  const datum = startTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
+  const tijdstip = startTijd.toLocaleString('nl', {hour: 'numeric', minute: 'numeric'});
+
+  planning.genodigden.forEach(genodigde => {
+    const gebouw = genodigde.gebouw.includes('(') ? genodigde.gebouw.substring(0, genodigde.gebouw.indexOf('(')).trim() : genodigde.gebouw;
+    const title = `Uitnodiging ${dienst} ${gebouw}`;
+    let huisgenotenTekst = '';
+    switch (genodigde.aantal) {
+      case 1:
+        huisgenotenTekst = ``;
+        break;
+      case 2:
+        huisgenotenTekst = `samen met uw huisgenoot`;
+        break;
+      default:
+        huisgenotenTekst = `samen met uw ${genodigde.aantal - 1} huisgenoten`;
+        break;
+    }
+    const event = calendar.createEvent(title, startTijd, eindTijd, {
+      description: `Geachte ${genodigde.naam},
+
+Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen, kan ik u hierbij meedelen dat u
+${huisgenotenTekst} bent ingedeeld om op D.V. ${datum} de ${dienst} bij te wonen.
+U wordt hartelijk uitgenodigd om op deze zondag de dienst bij te wonen.
+
+U wordt verzocht om onderstaande regels in acht te nemen, te meer ook omdat er door de mensen
+om ons heen gekeken zal worden hoe de kerken met de regels omgaan.
+
+• U wordt verwacht bij de ingang ${genodigde.ingang}.
+• De deuren van de kerk gaan open om ${tijdstip}u.
+• U wordt hier opgewacht door een coördinator (dat kan een uitgangshulp zijn, maar ook een
+(ouderling kerkrentmeester). Deze zal uw naam aantekenen op een lijst die wij moeten
+bijhouden (om bij eventuele nieuwe uitbraken te kunnen achterhalen met wie bepaalde
+personen in aanraking zijn geweest). Wij verzoeken u de aanwijzingen van de coördinator op
+te volgen. Ook wat betreft het plaatsnemen in de kerk. De coördinator zal u de plaats aanwijzen
+waar u plaats dient te nemen, dit om de gewenste afstand tot andere kerkbezoekers te kunnen
+waarborgen. Dit heeft tot gevolg dat u zeer waarschijnlijk niet op de plaats komt te zitten waar
+u gewoonlijk zit. Wij vragen hierbij om uw begrip.
+• Indien u een overjas aan heeft, neemt u deze mee naar uw zitplaats in de kerk. (U bent uiteraard
+vrij om deze uit te doen en eventueel op de bank of een stoel naast u te leggen). De garderobes
+zijn gesloten.
+• U checkt van tevoren uw gezondheidstoestand en van uw eventuele gezinsleden. Bij klachten
+blijft u thuis. Wel verzoeken wij u dan om de onderstaande persoon hiervan telefonisch
+(0639612809) in te lichten. Indien mogelijk kan er nog een andere persoon, die ook graag
+de dienst wil bijwonen, dan uw plek innemen. Uiteraard betekent dit niet dat u dan voorlopig
+niet meer aan de beurt bent. Wij trachten u zo spoedig mogelijk opnieuw in te delen.
+• Bij het uitgaan van de dienst wordt u verzocht om voldoende afstand van de andere
+kerkgangers te bewaren, ook bij de collectebussen. Degene die achterin de kerk zit, verlaat
+als eerste het gebouw. Wij verlaten de kerk van achteren naar voren. U verlaat de kerk door
+dezelfde deur als waar u naar binnen bent gekomen.
+
+Het gaat om uw eigen gezondheid, maar zeker ook om de gezondheid van de ander.
+Wij wensen u van harte Gods zegen toe onder bediening van het Woord.
+
+
+
+Met broederlijke groet,
+
+Jan Visscher
+namens de Hervormde Gemeente Genemuiden
+`,
+      location: gebouw,
+      guests: genodigde.email,
+      sendInvites: true
+    });
+    event.setGuestsCanModify(false);
+    event.setGuestsCanSeeGuests(false);
+    event.setGuestsCanInviteOthers(false);
+  });
 }
 
 function createDeelnemer(id: number, row: any[]): Deelnemer {
@@ -25,6 +114,7 @@ function createDeelnemer(id: number, row: any[]): Deelnemer {
     telefoonnummer: row[7],
     voorkeuren: row[8] instanceof String ? row[8].split(/[;,]/).filter(v => v && v != '' && v.toLowerCase() != 'geen voorkeur') : [],
     afwezigheid: row[9] instanceof String ? row[9].split(/[;,]/).filter(v => v && v != '' && v.toLowerCase() != 'ik kan op alle zondagen') : [],
+    uitnodigingen: []
   }
 }
 
@@ -33,13 +123,28 @@ function getDeelnemers(): Deelnemer[] {
   const sheet = spreadsheet.getSheets()[0];
   const range = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
   const deelnemers = range.getValues();
-  const result = [];
+  const result: Deelnemer[] = [];
   for (let i = 1; i < deelnemers.length; i++) {
     if (deelnemers[i][0] == '') {
       continue;
     }
     result.push(createDeelnemer(i, deelnemers[i]));
   }
+
+  const calendar = CalendarApp.getDefaultCalendar();
+  const now = new Date();
+  const from = new Date(now);
+  const to = new Date(now);
+  from.setMonth(now.getMonth() - 3);
+  to.setMonth(now.getMonth() + 3);
+  calendar.getEvents(from, to, { 'search': 'Uitnodiging' }).forEach(event => {
+    event.getGuestList().forEach(guest => {
+      const deelnemer = result.find(value => value.email === guest.getEmail());
+      if (deelnemer) {
+        deelnemer.uitnodigingen.push({datum: event.getStartTime().toISOString(), status: guest.getGuestStatus().toString()});
+      }
+    });
+  });
   return result;
 }
 
@@ -142,7 +247,7 @@ function createGebouw(sheet: GoogleAppsScript.Spreadsheet.Sheet, ingangen: Gebou
     stoelen: stoelen,
     props: props
   };
-  CacheService.getScriptCache()?.put(naam, JSON.stringify(result));
+  CacheService.getScriptCache()?.put(naam, JSON.stringify(result), 86400);
   return result;
 }
 

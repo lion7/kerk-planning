@@ -1,5 +1,5 @@
 import {css, html, LitElement, property, PropertyValues} from 'lit-element';
-import {Beschikbaarheid, Deelnemer, Gebouw, Genodigde, Richting, Stoel} from "../common/Model";
+import {Beschikbaarheid, Deelnemer, Gebouw, Genodigde, Planning, Richting, Stoel, Tijdvak} from "../common/Model";
 
 export class KerkPlanning extends LitElement {
   static styles = css`
@@ -54,19 +54,18 @@ export class KerkPlanning extends LitElement {
       width: 100%;
     }
   `;
-  static aantalStoelenTussenGenodigden = 2;
 
   @property({type: String}) gebouwenUrl = '';
   @property({type: String}) deelnemersUrl = '';
   @property({type: String}) uitnodigenUrl = '';
   @property({type: Number}) private gebouwIndex = 0;
-  @property({type: String}) private tijdvak = '';
+  @property({type: String}) private tijdvak = Tijdvak.Ochtend;
   @property({type: String}) private datum = KerkPlanning.volgendeZondag();
   @property({type: []}) gebouwen: Gebouw[] = [];
   @property({type: []}) deelnemers: Deelnemer[] = [];
   @property({type: []}) private genodigden: Genodigde[] = [];
-  @property({type: Function}) uitnodigen: (genodigden: Genodigde[]) => void = genodigden => {
-    console.log(genodigden);
+  @property({type: Function}) uitnodigen: (planning: Planning) => void = planning => {
+    console.log(planning);
   };
 
   protected update(changedProperties: PropertyValues) {
@@ -155,7 +154,7 @@ export class KerkPlanning extends LitElement {
       const genodigde: Genodigde = {
         id: deelnemer.id,
         naam: deelnemer.naam,
-        aantal: deelnemer.aantal,
+        aantal: aantalStoelenNodig,
         email: deelnemer.email,
         gebouw: gebouw.naam,
         ingang: KerkPlanning.ingang(gebouw, gevondenStoelen[0]),
@@ -189,7 +188,12 @@ export class KerkPlanning extends LitElement {
 
   _verstuurUitnodigingen(event: Event) {
     event.preventDefault();
-    this.uitnodigen(this.genodigden);
+    const planning: Planning = {
+      datum: this.datum.toISOString(),
+      tijdvak: this.tijdvak,
+      genodigden: this.genodigden
+    };
+    this.uitnodigen(planning);
   }
 
   _selecteerGebouw(event: Event) {
@@ -199,7 +203,7 @@ export class KerkPlanning extends LitElement {
 
   _selecteerTijdvak(event: Event) {
     const el = event.target as HTMLInputElement;
-    this.tijdvak = el.value;
+    this.tijdvak = el.value as Tijdvak;
   }
 
   _selecteerDatum(event: Event) {
@@ -250,10 +254,14 @@ export class KerkPlanning extends LitElement {
             <th>Aantal</th>
             <th>Voorkeuren</th>
             <th>Afwezigheid</th>
+            <th>Uitnodigingen</th>
           </tr>
           </thead>
           <tbody>
-          ${this.deelnemers.filter(deelnemer => this.kanIngeplandWorden(deelnemer)).map(value => html`
+          ${this.deelnemers
+      .filter(deelnemer => this.kanIngeplandWorden(deelnemer))
+      .sort((a, b) => KerkPlanning.laatsteUitnodiging(a).getTime()- KerkPlanning.laatsteUitnodiging(b).getTime())
+      .map(value => html`
             <tr>
             <td style="background-color: ${this.isGenodigde(value) ? 'red' : 'transparant'}"
                 draggable="true"
@@ -262,6 +270,7 @@ export class KerkPlanning extends LitElement {
             <td>${value.aantal}</td>
             <td><ul>${value.voorkeuren.map(value => html`<li>${value}</li>`)}</ul></td>
             <td><ul>${value.afwezigheid.map(value => html`<li>${value}</li>`)}</ul></td>
+            <td><ul>${value.uitnodigingen.map(value => html`<li>${new Date(value.datum).toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'})} - ${value.status}</li>`)}</ul></td>
             </tr>
           `)}
           </tbody>
@@ -269,7 +278,7 @@ export class KerkPlanning extends LitElement {
 
         <div id="controls">
           <div>Gebouw:<br/><select @change="${this._selecteerGebouw}">${this.gebouwen.map(((value, index) => html`<option value="${index}">${value.naam}</option>`))}</select></div>
-          <div>Tijdvak:<br/><select @change="${this._selecteerTijdvak}"><option value="ochtend">Ochtend</option><option value="middag">Middag</option><option value="avond">Avond</option></select></div>
+          <div>Tijdvak:<br/><select @change="${this._selecteerTijdvak}">${Object.keys(Tijdvak).map(value => html`<option value="${value}">${value}</option>`)}</select></div>
           <div>Datum:<br/><input type="date" @change="${this._selecteerDatum}" value="${KerkPlanning.isoDatum(this.datum)}" /></div>
           <div>Aantal plekken: ${aantalStoelen}</div>
           <div>Plekken beschikbaar: ${aantalStoelenBeschikbaar}</div>
@@ -437,5 +446,10 @@ export class KerkPlanning extends LitElement {
   private static isoDatum(date: Date): string {
     const datum = date.toISOString();
     return datum.substring(0, datum.indexOf('T'));
+  }
+
+  private static laatsteUitnodiging(deelnemer: Deelnemer): Date {
+    return deelnemer.uitnodigingen.map(value => new Date(value.datum))
+      .reduce((previousValue, currentValue) => previousValue > currentValue ? previousValue : currentValue, new Date(0));
   }
 }

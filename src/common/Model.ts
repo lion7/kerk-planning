@@ -1,3 +1,8 @@
+export interface Uitnodiging {
+  datum: string;
+  status: string;
+}
+
 export interface Deelnemer {
   id: number;
   naam: string;
@@ -9,16 +14,29 @@ export interface Deelnemer {
   telefoonnummer: string;
   voorkeuren: string[];
   afwezigheid: string[];
+  uitnodigingen: Uitnodiging[];
 }
 
 export interface Genodigde {
   id: number;
   naam: string;
   email: string;
-  aantal: string;
+  aantal: number;
   gebouw: string;
   ingang: string;
   stoelen: Stoel[];
+}
+
+export enum Tijdvak {
+  Ochtend = "Ochtend",
+  Middag = "Middag",
+  Avond = "Avond"
+}
+
+export interface Planning {
+  datum: string;
+  tijdvak: Tijdvak;
+  genodigden: Genodigde[];
 }
 
 export enum Richting {
