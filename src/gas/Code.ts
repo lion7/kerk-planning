@@ -105,6 +105,10 @@ function convertBeschikbaarheid(bg: string): Beschikbaarheid {
 
 function createGebouw(sheet: GoogleAppsScript.Spreadsheet.Sheet, ingangen: GebouwIngang[]): Gebouw {
   const naam = sheet.getName();
+  const cached = CacheService.getScriptCache()?.get(naam);
+  if (cached != null) {
+    return JSON.parse(cached);
+  }
   const range = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
   const indeling = range.getValues();
   const backgrounds = range.getBackgrounds();
@@ -132,12 +136,14 @@ function createGebouw(sheet: GoogleAppsScript.Spreadsheet.Sheet, ingangen: Gebou
       }
     }
   }
-  return {
+  const result: Gebouw = {
     naam: naam,
     ingangen: ingangen.filter(v => v.gebouw == naam),
     stoelen: stoelen,
     props: props
   };
+  CacheService.getScriptCache()?.put(naam, JSON.stringify(result));
+  return result;
 }
 
 function getGebouwen(): Gebouw[] {

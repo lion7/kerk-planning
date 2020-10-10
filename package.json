@@ -7,7 +7,7 @@
   "main": "index.js",
   "module": "index.js",
   "scripts": {
-    "build": "rimraf dist && tsc && rollup -c rollup.config.js",
+    "build": "rimraf dist && tsc && rollup -c rollup.config.js && clasp push",
     "start": "concurrently --kill-others --names tsc,rollup,es-dev-server \"npm run tsc:watch\" \"rollup -c rollup.config.js -w\" \"es-dev-server --app-index demo/index.html --node-resolve --open --watch\"",
     "tsc:watch": "tsc --watch",
     "lint:eslint": "eslint --ext .ts,.html . --ignore-path .gitignore",
