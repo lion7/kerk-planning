@@ -1,5 +1,16 @@
 import AppsScriptHttpRequestEvent = GoogleAppsScript.Events.AppsScriptHttpRequestEvent;
-import {Beschikbaarheid, Deelnemer, Gebouw, Ingang, Planning, Prop, Richting, Stoel, Tijdvak} from "../common/Model";
+import {
+  Beschikbaarheid,
+  Deelnemer,
+  Gebouw,
+  Ingang,
+  Opgave,
+  Planning,
+  Prop,
+  Richting,
+  Stoel,
+  Tijdvak
+} from "../common/Model";
 
 interface GebouwIngang extends Ingang {
   gebouw: string;
@@ -9,32 +20,69 @@ function doGet(request: AppsScriptHttpRequestEvent) {
   return HtmlService.createTemplateFromFile('dist/Index').evaluate();
 }
 
-function uitnodigen(planning: Planning) {
-  Logger.log(JSON.stringify(planning));
+function isoDatum(date: Date): string {
+  const datum = date.toISOString();
+  return datum.substring(0, datum.indexOf('T'));
+}
 
-  const calendar = CalendarApp.getDefaultCalendar();
+function ophalen(datum: string, tijdvak: Tijdvak): Planning | undefined {
+  const filename = `planning-${isoDatum(new Date(datum))}-${tijdvak}.json`
+  const iterator = DriveApp.getFilesByName(filename);
+  if (iterator.hasNext()) {
+    const file = iterator.next();
+    const json = file.getBlob().getDataAsString();
+    return JSON.parse(json);
+  } else {
+    return undefined;
+  }
+}
+
+function opslaan(planning: Planning) {
+  const filename = `planning-${isoDatum(new Date(planning.datum))}-${planning.tijdvak}.json`
+  const file = DriveApp.createFile(filename, JSON.stringify(planning), "application/json");
+  const iterator = DriveApp.getFilesByName(filename);
+  while (iterator.hasNext()) {
+    const f = iterator.next();
+    if (f.getId() !== file.getId()) {
+      f.setTrashed(true);
+    }
+  }
+}
+
+function uitnodigen(planning: Planning): number {
+  opslaan(planning);
+
+  const openingsTijd = new Date(planning.datum);
   const startTijd = new Date(planning.datum);
   const eindTijd = new Date(planning.datum);
   switch (planning.tijdvak) {
     case Tijdvak.Ochtend:
-      startTijd.setHours(9, 10, 0, 0);
+      openingsTijd.setHours(9, 10, 0, 0);
+      startTijd.setHours(9, 30, 0, 0);
       eindTijd.setHours(11, 0, 0, 0);
       break;
     case Tijdvak.Middag:
-      startTijd.setHours(15, 10, 0, 0);
+      openingsTijd.setHours(15, 10, 0, 0);
+      startTijd.setHours(15, 30, 0, 0);
       eindTijd.setHours(17, 0, 0, 0);
       break;
     case Tijdvak.Avond:
-      startTijd.setHours(18, 40, 0, 0);
+      openingsTijd.setHours(18, 40, 0, 0);
+      startTijd.setHours(19, 0, 0, 0);
       eindTijd.setHours(20, 30, 0, 0);
       break;
   }
 
   const dienst = `${planning.tijdvak.toLowerCase()}dienst`;
-  const datum = startTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
-  const tijdstip = startTijd.toLocaleString('nl', {hour: 'numeric', minute: 'numeric'});
+  const datum = openingsTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
+  const tijdstip = openingsTijd.toLocaleString('nl', {hour: 'numeric', minute: 'numeric'});
 
-  planning.genodigden.forEach(genodigde => {
+  const calendar = CalendarApp.getDefaultCalendar();
+  const reedsGenodigden: string[] = [];
+  calendar.getEvents(startTijd, eindTijd, {'search': 'Uitnodiging'}).forEach(event => reedsGenodigden.push(...event.getGuestList().map(guest => guest.getEmail())));
+  const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
+
+  nieuweGenodigden.forEach(genodigde => {
     const gebouw = genodigde.gebouw.includes('(') ? genodigde.gebouw.substring(0, genodigde.gebouw.indexOf('(')).trim() : genodigde.gebouw;
     const title = `Uitnodiging ${dienst} ${gebouw}`;
     let huisgenotenTekst = '';
@@ -99,36 +147,67 @@ namens de Hervormde Gemeente Genemuiden
     event.setGuestsCanModify(false);
     event.setGuestsCanSeeGuests(false);
     event.setGuestsCanInviteOthers(false);
+    event.setTag('Naam', genodigde.naam)
+    event.setTag('Aantal', genodigde.aantal.toString())
+    event.setTag('Ingang', genodigde.ingang)
   });
+
+  const filename = `genodigden-${isoDatum(new Date(planning.datum))}-${planning.tijdvak}`;
+  const iterator = DriveApp.getFilesByName(filename);
+  let spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
+  if (iterator.hasNext()) {
+    const file = iterator.next();
+    spreadsheet = SpreadsheetApp.openById(file.getId());
+  } else {
+    spreadsheet = SpreadsheetApp.create(filename);
+  }
+
+  nieuweGenodigden.forEach(genodigde => {
+    let sheet = spreadsheet.getSheetByName(genodigde.ingang);
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet();
+      sheet.setName(genodigde.ingang);
+      sheet.appendRow(['Naam', 'Aantal', 'Email'])
+    }
+    sheet.appendRow([genodigde.naam, genodigde.aantal, genodigde.email]);
+  });
+
+  return nieuweGenodigden.length;
 }
 
-function createDeelnemer(id: number, row: any[]): Deelnemer {
+function createDeelnemer(row: any[], headerRow: string[]): Deelnemer {
+  const opgaven: Opgave[] = [];
+  for (let i = 7; i < row.length; i++) {
+    const dienst = headerRow[i];
+    const aantal = parseInt(row[i]);
+    opgaven.push({
+      dienst: dienst,
+      aantal: aantal
+    });
+  }
   return {
-    id: id,
     email: row[1],
     naam: row[2],
-    aantal: row[3],
-    adres: row[4],
-    postcode: row[5],
-    woonplaats: row[6],
-    telefoonnummer: row[7],
-    voorkeuren: row[8] instanceof String ? row[8].split(/[;,]/).filter(v => v && v != '' && v.toLowerCase() != 'geen voorkeur') : [],
-    afwezigheid: row[9] instanceof String ? row[9].split(/[;,]/).filter(v => v && v != '' && v.toLowerCase() != 'ik kan op alle zondagen') : [],
+    adres: row[3],
+    postcode: row[4],
+    woonplaats: row[5],
+    telefoonnummer: row[6],
+    opgaven: opgaven,
     uitnodigingen: []
   }
 }
 
 function getDeelnemers(): Deelnemer[] {
-  const spreadsheet = SpreadsheetApp.openById('1RovlUMgm8ApTsuB0TWrFTjS5H_QpKfYV9SeTWH24GFE');
-  const sheet = spreadsheet.getSheets()[0];
+  const sheet = SpreadsheetApp.getActiveSheet();
   const range = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
   const deelnemers = range.getValues();
+  const headerRow = deelnemers[0];
   const result: Deelnemer[] = [];
   for (let i = 1; i < deelnemers.length; i++) {
     if (deelnemers[i][0] == '') {
       continue;
     }
-    result.push(createDeelnemer(i, deelnemers[i]));
+    result.push(createDeelnemer(deelnemers[i], headerRow));
   }
 
   const calendar = CalendarApp.getDefaultCalendar();
@@ -137,11 +216,14 @@ function getDeelnemers(): Deelnemer[] {
   const to = new Date(now);
   from.setMonth(now.getMonth() - 3);
   to.setMonth(now.getMonth() + 3);
-  calendar.getEvents(from, to, { 'search': 'Uitnodiging' }).forEach(event => {
+  calendar.getEvents(from, to, {'search': 'Uitnodiging'}).forEach(event => {
     event.getGuestList().forEach(guest => {
       const deelnemer = result.find(value => value.email === guest.getEmail());
       if (deelnemer) {
-        deelnemer.uitnodigingen.push({datum: event.getStartTime().toISOString(), status: guest.getGuestStatus().toString()});
+        deelnemer.uitnodigingen.push({
+          datum: event.getStartTime().toISOString(),
+          status: guest.getGuestStatus().toString()
+        });
       }
     });
   });
@@ -182,8 +264,7 @@ function createIngang(row: any[]): GebouwIngang {
   };
 }
 
-function getIngangen(): GebouwIngang[] {
-  const spreadsheet = SpreadsheetApp.openById('1FPTrd515HQUC0LXMBU4qUUNzKfc80bi7VXOxjOhWffg');
+function getIngangen(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet): GebouwIngang[] {
   const sheet = spreadsheet.getSheets()[0];
   const range = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
   const ingangen = range.getValues();
@@ -253,7 +334,7 @@ function createGebouw(sheet: GoogleAppsScript.Spreadsheet.Sheet, ingangen: Gebou
 
 function getGebouwen(): Gebouw[] {
   const spreadsheet = SpreadsheetApp.openById('1FPTrd515HQUC0LXMBU4qUUNzKfc80bi7VXOxjOhWffg');
-  const ingangen = getIngangen();
+  const ingangen = getIngangen(spreadsheet);
   const sheets = spreadsheet.getSheets();
   const result: Gebouw[] = [];
   for (let i = 1; i < sheets.length; i++) {

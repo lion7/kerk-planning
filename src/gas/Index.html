@@ -10,8 +10,10 @@
     <script>
         var kp = document.querySelector('kerk-planning');
         google.script.run.withSuccessHandler(result => kp.gebouwen = result).getGebouwen();
-        google.script.run.withSuccessHandler(result => kp.deelnemers = result).getDeelnemers();
-        kp.uitnodigen = planning => { google.script.run.uitnodigen(planning); };
+        google.script.run.withSuccessHandler(result => { console.log(JSON.stringify(result)); kp.deelnemers = result; }).getDeelnemers();
+        kp.ophalen = (datum, tijdvak, handler) => { google.script.run.withSuccessHandler(handler).ophalen(datum, tijdvak); };
+        kp.opslaan = (planning, handler) => { google.script.run.withSuccessHandler(handler).opslaan(planning); };
+        kp.uitnodigen = (planning, handler) => { google.script.run.withSuccessHandler(handler).uitnodigen(planning); };
     </script>
   </body>
 </html>

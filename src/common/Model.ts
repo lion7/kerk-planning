@@ -3,22 +3,23 @@ export interface Uitnodiging {
   status: string;
 }
 
+export interface Opgave {
+  dienst: string;
+  aantal: number;
+}
+
 export interface Deelnemer {
-  id: number;
   naam: string;
-  aantal: string;
   adres: string;
   postcode: string;
   woonplaats: string;
   email: string;
   telefoonnummer: string;
-  voorkeuren: string[];
-  afwezigheid: string[];
+  opgaven: Opgave[];
   uitnodigingen: Uitnodiging[];
 }
 
 export interface Genodigde {
-  id: number;
   naam: string;
   email: string;
   aantal: number;

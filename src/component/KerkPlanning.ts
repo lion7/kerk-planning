@@ -1,7 +1,19 @@
 import {css, html, LitElement, property, PropertyValues} from 'lit-element';
-import {Beschikbaarheid, Deelnemer, Gebouw, Genodigde, Planning, Richting, Stoel, Tijdvak} from "../common/Model";
+import {
+  Beschikbaarheid,
+  Deelnemer,
+  Gebouw,
+  Genodigde,
+  Opgave,
+  Planning,
+  Richting,
+  Stoel,
+  Tijdvak
+} from "../common/Model";
 
 export class KerkPlanning extends LitElement {
+  static controlsHeight = 170;
+  static controlsWidth = 640;
   static styles = css`
     :host {
       display: block;
@@ -9,6 +21,16 @@ export class KerkPlanning extends LitElement {
 
     th {
       text-align: left;
+    }
+
+    .loading {
+      background: rgba(0,0,0,.5);
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 999;
     }
 
     #deelnemers th {
@@ -39,10 +61,10 @@ export class KerkPlanning extends LitElement {
       position: fixed;
       top: 10px;
       right: 10px;
-      height: 100px;
+      height: ${KerkPlanning.controlsHeight - 30}px;
       display: grid;
       grid-template-columns: 200px 200px 200px;
-      gap: 8px;
+      gap: 10px;
     }
 
     .deelnemer {
@@ -58,18 +80,30 @@ export class KerkPlanning extends LitElement {
   @property({type: String}) gebouwenUrl = '';
   @property({type: String}) deelnemersUrl = '';
   @property({type: String}) uitnodigenUrl = '';
-  @property({type: Number}) private gebouwIndex = 0;
-  @property({type: String}) private tijdvak = Tijdvak.Ochtend;
-  @property({type: String}) private datum = KerkPlanning.volgendeZondag();
   @property({type: []}) gebouwen: Gebouw[] = [];
   @property({type: []}) deelnemers: Deelnemer[] = [];
-  @property({type: []}) private genodigden: Genodigde[] = [];
-  @property({type: Function}) uitnodigen: (planning: Planning) => void = planning => {
+  @property({type: Function}) ophalen: (datum: string, tijdvak: Tijdvak, handler: (planning: Planning | undefined) => void) => void = (datum, tijdvak, handler) => {
+    console.log(`Ophalen van ${datum}-${tijdvak}`);
+    handler(undefined);
+  };
+  @property({type: Function}) opslaan: (planning: Planning, handler: () => void) => void = (planning, handler) => {
     console.log(planning);
+    handler();
+  };
+  @property({type: Function}) uitnodigen: (planning: Planning, handler: (aantalGenodigden: number) => void) => void = (planning, handler) => {
+    console.log(planning);
+    handler(0);
   };
 
+  @property({type: Boolean}) private loading = false;
+  @property({type: Number}) private gebouwIndex = 0;
+  @property({type: String}) private datum = KerkPlanning.volgendeZondag();
+  @property({type: String}) private tijdvak = Tijdvak.Ochtend;
+  @property({type: []}) private genodigden: Genodigde[] = [];
+
   protected update(changedProperties: PropertyValues) {
-    super.update(changedProperties);
+    super.update(changedProperties)
+
     if (changedProperties.has('gebouwenUrl') && this.gebouwenUrl && this.gebouwenUrl != '') {
       console.log(`Gebouwen ophalen van ${this.gebouwenUrl}`);
       fetch(this.gebouwenUrl, {mode: "no-cors"}).then(value => value.json()).then(value => {
@@ -89,6 +123,17 @@ export class KerkPlanning extends LitElement {
         }).then(value => console.log(`Uitnodigingen verstuurd: ${value}`))
       }
     }
+
+    if (changedProperties.has('datum') || changedProperties.has('tijdvak')) {
+      this.loading = true;
+      this.ophalen(KerkPlanning.isoDatum(this.datum), this.tijdvak, planning => {
+        this.loading = false;
+        if (planning) {
+          this.genodigden = planning.genodigden;
+          console.log(`Planning opgehaald met ${planning.genodigden.length} genodigden`);
+        }
+      });
+    }
   }
 
   _dragstart(event: DragEvent) {
@@ -96,13 +141,13 @@ export class KerkPlanning extends LitElement {
     if (!el || !el.getAttribute) {
       return;
     }
-    const deelnemerId = el.getAttribute("data-deelnemer-id");
-    if (!deelnemerId) {
-      console.log("Deelnemer id niet gevonden!");
+    const deelnemerEmail = el.getAttribute("data-deelnemer-email");
+    if (!deelnemerEmail) {
+      console.log("Deelnemer email niet gevonden!");
       return;
     }
 
-    event.dataTransfer?.setData('text/plain', deelnemerId);
+    event.dataTransfer?.setData('text/plain', deelnemerEmail);
   }
 
   _drop(event: DragEvent) {
@@ -116,9 +161,9 @@ export class KerkPlanning extends LitElement {
       return;
     }
 
-    const deelnemerIdStr = event.dataTransfer?.getData('text/plain');
-    if (!deelnemerIdStr) {
-      console.log("Deelnemer id niet gevonden!");
+    const deelnemerEmail = event.dataTransfer?.getData('text/plain');
+    if (!deelnemerEmail) {
+      console.log("Deelnemer email niet gevonden!");
       return;
     }
 
@@ -135,14 +180,19 @@ export class KerkPlanning extends LitElement {
       return;
     }
 
-    const deelnemerId = parseInt(deelnemerIdStr);
-    const deelnemer = this.findDeelnemer(deelnemerId);
+    const deelnemer = this.findDeelnemer(deelnemerEmail);
     if (!deelnemer) {
       console.log("Deelnemer niet gevonden!");
       return;
     }
 
-    const aantalStoelenNodig = parseInt(deelnemer.aantal);
+    const opgave = this.findOpgave(deelnemer);
+    if (!opgave) {
+      console.log("Opgave niet gevonden!");
+      return;
+    }
+
+    const aantalStoelenNodig = opgave.aantal;
     const vanRij = stoel.rij;
     const totRij = KerkPlanning.isHorizontaal(stoel.richting) ? vanRij + 1 : vanRij + aantalStoelenNodig;
     const vanKolom = stoel.kolom;
@@ -152,7 +202,6 @@ export class KerkPlanning extends LitElement {
     console.log(`${gevondenStoelen.length} stoelen gevonden voor ${deelnemer.naam}`);
     if (gevondenStoelen.length == aantalStoelenNodig) {
       const genodigde: Genodigde = {
-        id: deelnemer.id,
         naam: deelnemer.naam,
         aantal: aantalStoelenNodig,
         email: deelnemer.email,
@@ -160,40 +209,68 @@ export class KerkPlanning extends LitElement {
         ingang: KerkPlanning.ingang(gebouw, gevondenStoelen[0]),
         stoelen: gevondenStoelen
       };
-      this.genodigden = [...this.genodigden.filter(value => value.id != deelnemerId), genodigde];
+      this.genodigden = [...this.genodigden.filter(value => value.email != deelnemerEmail), genodigde];
     }
   }
 
+  _planning(): Planning {
+    return {
+      datum: KerkPlanning.isoDatum(this.datum),
+      tijdvak: this.tijdvak,
+      genodigden: this.genodigden
+    };
+  }
+
   _reset(event: DragEvent) {
-    const deelnemerIdStr = event.dataTransfer?.getData('text/plain');
-    if (!deelnemerIdStr) {
-      console.log("Deelnemer id niet gevonden!");
+    const deelnemerEmail = event.dataTransfer?.getData('text/plain');
+    if (!deelnemerEmail) {
+      console.log("Deelnemer email niet gevonden!");
       return;
     }
 
-    const deelnemerId = parseInt(deelnemerIdStr);
-    this.genodigden = this.genodigden.filter(value => value.id != deelnemerId);
+    this.genodigden = this.genodigden.filter(value => value.email != deelnemerEmail);
+  }
+
+  _resetPlanning(event: Event) {
+    event.preventDefault();
+    this.genodigden = [];
+  }
+
+  _downloadPlanning(event: Event) {
+    event.preventDefault();
+    const planning = this._planning();
+    const link = document.createElement("a");
+    link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURI(JSON.stringify(planning)));
+    link.setAttribute('download', `planning-${KerkPlanning.isoDatum(this.datum)}-${this.tijdvak.toLowerCase()}.json`);
+    link.click(); // This will download the JSON file
   }
 
   _downloadLijst(event: Event) {
     event.preventDefault();
     const rows = this.genodigden.sort((a, b) => a.ingang.localeCompare(b.ingang))
       .map(value => [value.gebouw, value.ingang, value.naam, value.aantal, value.email]);
-    const csvContent = "data:text/csv;charset=utf-8,gebouw;ingang;naam;aantal personen;email\n" + rows.map(e => e.join(";")).join("\n");
+    const csvContent = "gebouw;ingang;naam;aantal personen;email\n" + rows.map(e => e.join(";")).join("\n");
     const link = document.createElement("a");
-    link.setAttribute('href', encodeURI(csvContent));
-    link.setAttribute('download', `genodigden-${new Date().toISOString()}.csv`);
+    link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURI(csvContent));
+    link.setAttribute('download', `genodigden-${KerkPlanning.isoDatum(this.datum)}-${this.tijdvak.toLowerCase()}.csv`);
     link.click(); // This will download the CSV file
+  }
+
+  _opslaanPlanning(event: Event) {
+    event.preventDefault();
+    const planning = this._planning();
+    this.loading = true;
+    this.opslaan(planning, () => this.loading = false);
   }
 
   _verstuurUitnodigingen(event: Event) {
     event.preventDefault();
-    const planning: Planning = {
-      datum: this.datum.toISOString(),
-      tijdvak: this.tijdvak,
-      genodigden: this.genodigden
-    };
-    this.uitnodigen(planning);
+    const planning = this._planning();
+    this.loading = true;
+    this.uitnodigen(planning, aantalGenodigden => {
+      this.loading = false;
+      alert(`Er zijn ${aantalGenodigden} uitnodigingen verstuurd!`);
+    });
   }
 
   _selecteerGebouw(event: Event) {
@@ -236,8 +313,8 @@ export class KerkPlanning extends LitElement {
         .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
       const kolommen = [...gebouw.stoelen.map(value => value.kolom), ...gebouw.props.map(value => value.kolom)]
         .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
-      gridRowsTemplate = css`repeat(${rijen}, min((100vh - 130px) / ${rijen}, (49vw - 20px) / ${kolommen}))`;
-      gridColumnsTemplate = css`repeat(${kolommen}, min((100vh - 130px) / ${rijen}, (49vw - 20px) / ${kolommen}))`;
+      gridRowsTemplate = css`repeat(${rijen}, min((100vh - ${KerkPlanning.controlsHeight}px) / ${rijen}, (49vw - 20px) / ${kolommen}))`;
+      gridColumnsTemplate = css`repeat(${kolommen}, min((100vh - ${KerkPlanning.controlsHeight}px) / ${rijen}, (49vw - 20px) / ${kolommen}))`;
     }
 
     return html`
@@ -251,26 +328,28 @@ export class KerkPlanning extends LitElement {
           <thead>
           <tr>
             <th>Naam</th>
-            <th>Aantal</th>
-            <th>Voorkeuren</th>
-            <th>Afwezigheid</th>
+            <th>Opgaven</th>
             <th>Uitnodigingen</th>
           </tr>
           </thead>
           <tbody>
           ${this.deelnemers
       .filter(deelnemer => this.kanIngeplandWorden(deelnemer))
-      .sort((a, b) => KerkPlanning.laatsteUitnodiging(a).getTime()- KerkPlanning.laatsteUitnodiging(b).getTime())
-      .map(value => html`
+      .sort((a, b) => KerkPlanning.laatsteUitnodiging(a).getTime() - KerkPlanning.laatsteUitnodiging(b).getTime())
+      .map(deelnemer => html`
             <tr>
-            <td style="background-color: ${this.isGenodigde(value) ? 'red' : 'transparant'}"
+            <td style="background-color: ${this.isGenodigde(deelnemer) ? 'red' : 'transparant'}"
                 draggable="true"
-                data-deelnemer-id="${value.id}"
-                @dragstart="${this._dragstart})">${value.naam}</td>
-            <td>${value.aantal}</td>
-            <td><ul>${value.voorkeuren.map(value => html`<li>${value}</li>`)}</ul></td>
-            <td><ul>${value.afwezigheid.map(value => html`<li>${value}</li>`)}</ul></td>
-            <td><ul>${value.uitnodigingen.map(value => html`<li>${new Date(value.datum).toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'})} - ${value.status}</li>`)}</ul></td>
+                data-deelnemer-email="${deelnemer.email}"
+                @dragstart="${this._dragstart})">${deelnemer.naam}</td>
+            <td><ul>${deelnemer.opgaven.map(value => html`<li>${value.dienst} - ${value.aantal} personen</li>`)}</ul></td>
+            <td><ul>${deelnemer.uitnodigingen.map(value => html`<li>${new Date(value.datum).toLocaleString('nl', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric'
+      })} - ${value.status}</li>`)}</ul></td>
             </tr>
           `)}
           </tbody>
@@ -283,9 +362,11 @@ export class KerkPlanning extends LitElement {
           <div>Aantal plekken: ${aantalStoelen}</div>
           <div>Plekken beschikbaar: ${aantalStoelenBeschikbaar}</div>
           <div>Plekken ingepland: ${aantalStoelenIngepland}</div>
-          <div></div>
+          <button @click="${this._downloadPlanning}">Planning exporteren</button>
           <button @click="${this._downloadLijst}">Lijst downloaden</button>
+          <button @click="${this._opslaanPlanning}">Planning opslaan</button>
           <button @click="${this._verstuurUitnodigingen}">Uitnodigingen versturen</button>
+          <button @click="${this._resetPlanning}">Reset planning</button>
         </div>
 
         <div id="gebouw" style="grid-template-rows: ${gridRowsTemplate}; grid-template-columns: ${gridColumnsTemplate};">
@@ -313,7 +394,7 @@ export class KerkPlanning extends LitElement {
                class="stoel"
                draggable="${!!genodigde}"
                data-stoel-index="${index}"
-               data-deelnemer-id="${genodigde ? genodigde.id : ''}"
+               data-deelnemer-email="${genodigde ? genodigde.email : ''}"
                title="${title}"
                style="grid-row: ${stoel.rij}; grid-column: ${stoel.kolom}; transform: rotate(${rotation}); ${styling}"
                ondragenter="return ${!beschikbaar}"
@@ -324,20 +405,32 @@ export class KerkPlanning extends LitElement {
       `;
     })}
         </div>
+        <div class="${this.loading ? 'loading' : ''}"></div>
       </div>
     `;
   }
 
-  private findDeelnemer(id: number): Deelnemer | undefined {
-    return this.deelnemers.find(value => value.id == id);
+  private findDeelnemer(email: string): Deelnemer | undefined {
+    return this.deelnemers.find(value => value.email == email);
   }
 
   private findGenodigde(stoel: Stoel): Genodigde | undefined {
-    return this.genodigden.find(value => value.stoelen.includes(stoel));
+    return this.genodigden.find(value => value.stoelen.some(s => s.rij == stoel.rij && s.kolom == stoel.kolom));
+  }
+
+  private findOpgave(deelnemer: Deelnemer): Opgave | undefined {
+    const gebouw = this.gebouwen[this.gebouwIndex]
+    if (!gebouw) {
+      console.log("Gebouw niet gevonden!");
+      return undefined;
+    }
+    const g = gebouw.naam.includes('(') ? gebouw.naam.substring(0, gebouw.naam.indexOf('(')).toLowerCase().trim() : gebouw.naam.toLowerCase();
+    const t = this.tijdvak.toLowerCase();
+    return deelnemer.opgaven.find(value => value.aantal > 0 && value.dienst.toLowerCase().includes(g) && value.dienst.toLowerCase().includes(t));
   }
 
   private isGenodigde(deelnemer: Deelnemer): boolean {
-    return this.genodigden.some(value => value.id == deelnemer.id);
+    return this.genodigden.some(value => value.email == deelnemer.email);
   }
 
   private isBeschikbaar(gebouw: Gebouw, stoel: Stoel): boolean {
@@ -353,25 +446,7 @@ export class KerkPlanning extends LitElement {
   }
 
   private kanIngeplandWorden(deelnemer: Deelnemer): boolean {
-    return (deelnemer.voorkeuren.length == 0 || deelnemer.voorkeuren.some(v => this.isVoorkeur(v))) &&
-      (deelnemer.afwezigheid.length == 0 || !deelnemer.afwezigheid.some(v => this.isAfwezig(v)));
-  }
-
-  private isVoorkeur(voorkeur: string): boolean {
-    const gebouw = this.gebouwen[this.gebouwIndex]
-    if (!gebouw) {
-      console.log("Gebouw niet gevonden!");
-      return false;
-    }
-    const v = voorkeur.toLowerCase();
-    const g = gebouw.naam.includes('(') ? gebouw.naam.substring(0, gebouw.naam.indexOf('(')).toLowerCase().trim() : gebouw.naam.toLowerCase();
-    const t = this.tijdvak.toLowerCase();
-    return v.includes(g) && v.includes(t);
-  }
-
-  private isAfwezig(datum: string): boolean {
-    const planDatum = this.datum.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
-    return datum.startsWith(planDatum);
+    return !!this.findOpgave(deelnemer);
   }
 
   private static isOnbeschikbaar(stoel: Stoel, stoelen: Stoel[]): boolean {
@@ -440,6 +515,7 @@ export class KerkPlanning extends LitElement {
     const date = new Date();
     const daysUntilNextSunday = 7 - date.getDay();
     date.setDate(date.getDate() + daysUntilNextSunday);
+    date.setHours(9, 30, 0, 0);
     return date;
   }
 
