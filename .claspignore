@@ -1,5 +1,5 @@
 **/**
 !appsscript.json
-!src/common/Model.ts
-!src/gas/Code.ts
+!src/common/*.ts
+!src/gas/*.ts
 !dist/Index.html

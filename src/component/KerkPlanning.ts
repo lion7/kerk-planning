@@ -10,17 +10,77 @@ import {
   Stoel,
   Tijdvak
 } from "../common/Model";
+import '@webcomponents/webcomponentsjs/webcomponents-loader';
+import '@material/mwc-icon';
+import '@material/mwc-button';
+import '@material/mwc-fab';
+import '@material/mwc-list';
+import '@material/mwc-list/mwc-list-item';
+import '@material/mwc-select';
+import '@material/mwc-top-app-bar-fixed';
 
 export class KerkPlanning extends LitElement {
-  static controlsHeight = 170;
-  static controlsWidth = 640;
   static styles = css`
     :host {
       display: block;
     }
 
-    th {
-      text-align: left;
+    mwc-select {
+      margin: 0 10px;
+    }
+
+    mwc-button {
+      --mdc-theme-primary: #018786;
+      --mdc-theme-on-primary: white;
+      margin: 0 10px;
+    }
+
+    #gebouwControl {
+      width: 300px;
+    }
+
+    #planning {
+      display: grid;
+      grid-template-columns: auto min-content;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    #view {
+      display: grid;
+      grid-template-rows: min-content auto;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    #deelnemers {
+      height: 92vh;
+      overflow: auto;
+    }
+
+    #deelnemers ul {
+      margin: 0.25rem 0;
+      padding: 0 1rem;
+    }
+
+    #gebouw {
+      height: min-content;
+      width: min-content;
+      background-color: #836B32;
+    }
+
+    .inverted {
+      background-color: gray;
+      color: white;
+    }
+
+    .deelnemer {
+      cursor: move;
+    }
+
+    .stoel {
+      height: 100%;
+      width: 100%;
     }
 
     .loading {
@@ -31,49 +91,6 @@ export class KerkPlanning extends LitElement {
       top: 0;
       left: 0;
       z-index: 999;
-    }
-
-    #deelnemers th {
-      position: sticky;
-      top: 0;
-      background: white;
-      padding: 0.25rem;
-    }
-
-    #deelnemers td ul {
-      margin: 0.25rem 0;
-      padding: 0 1rem;
-    }
-
-    #gebouwen {
-      display: grid;
-    }
-
-    #gebouw {
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      display: grid;
-      background-color: #836B32;
-    }
-
-    #controls {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      height: ${KerkPlanning.controlsHeight - 30}px;
-      display: grid;
-      grid-template-columns: 200px 200px 200px;
-      gap: 10px;
-    }
-
-    .deelnemer {
-      cursor: move;
-    }
-
-    .stoel {
-      height: 100%;
-      width: 100%;
     }
   `;
 
@@ -100,6 +117,126 @@ export class KerkPlanning extends LitElement {
   @property({type: String}) private datum = KerkPlanning.volgendeZondag();
   @property({type: String}) private tijdvak = Tijdvak.Ochtend;
   @property({type: []}) private genodigden: Genodigde[] = [];
+
+  render() {
+    const gebouw = this.gebouwen[this.gebouwIndex]
+    if (!gebouw) {
+      console.log("Gebouw niet gevonden!");
+      return;
+    }
+
+    const aantalStoelen = gebouw.stoelen.length;
+    let beschikbareStoelen: Stoel[] = [];
+    let aantalStoelenBeschikbaar = 0;
+    let aantalStoelenIngepland = 0;
+    let gridRowsTemplate = css`100%`;
+    let gridColumnsTemplate = css`100%`;
+
+    if (aantalStoelen > 0) {
+      beschikbareStoelen = gebouw.stoelen.filter(stoel => this.isBeschikbaar(gebouw, stoel));
+      aantalStoelenIngepland = this.genodigden.filter(value => value.gebouw == gebouw.naam)
+        .map(value => value.stoelen.length)
+        .reduce((previousValue, currentValue) => previousValue + currentValue, 0);
+      aantalStoelenBeschikbaar = beschikbareStoelen.length;
+
+      const rijen = [...gebouw.stoelen.map(value => value.rij), ...gebouw.props.map(value => value.rij)]
+        .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
+      const kolommen = [...gebouw.stoelen.map(value => value.kolom), ...gebouw.props.map(value => value.kolom)]
+        .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
+      gridRowsTemplate = css`repeat(${rijen}, min(88vh / ${rijen}, (59vw - 20px) / ${kolommen}))`;
+      gridColumnsTemplate = css`repeat(${kolommen}, min(88vh / ${rijen}, (59vw - 20px) / ${kolommen}))`;
+    }
+
+    return html`
+      <mwc-top-app-bar-fixed>
+        <div slot="title">KerkPlanning</div>
+        <mwc-select id="gebouwControl" label="Gebouw" slot="actionItems" value="${this.gebouwIndex}" @selected="${this._selecteerGebouw}">
+          ${this.gebouwen.map(((value, index) => html`<mwc-list-item value="${index}">${value.naam}</mwc-list-item>`))}
+        </mwc-select>
+        <mwc-select id="tijdvakControl" label="Tijdvak" slot="actionItems" value="${this.tijdvak}" @selected="${this._selecteerTijdvak}">
+          ${Object.keys(Tijdvak).map(value => html`<mwc-list-item value="${value}">${value}</mwc-list-item>`)}
+        </mwc-select>
+        <mwc-button raised label="Planning exporteren" icon="archive" slot="actionItems" @click="${this._downloadPlanning}"></mwc-button>
+        <mwc-button raised label="Lijst downloaden" icon="list" slot="actionItems" @click="${this._downloadLijst}"></mwc-button>
+        <mwc-button raised label="Planning opslaan" icon="save_alt" slot="actionItems" @click="${this._opslaanPlanning}"></mwc-button>
+        <mwc-button raised label="Reset planning" icon="restore" slot="actionItems" @click="${this._resetPlanning}"></mwc-button>
+        <mwc-fab extended label="Uitnodigingen versturen" icon="send" slot="actionItems" @click="${this._verstuurUitnodigingen}"></mwc-fab>
+        <div>
+          <div id="planning">
+            <mwc-list id="deelnemers"
+                      ondragenter="return false"
+                      ondragover="return false"
+                      @drop="${this._reset}">
+                ${this.deelnemers.filter(deelnemer => this.kanIngeplandWorden(deelnemer))
+      .sort((a, b) => KerkPlanning.laatsteUitnodiging(a).getTime() - KerkPlanning.laatsteUitnodiging(b).getTime())
+      .map(deelnemer => {
+        const opgave = this.findOpgave(deelnemer);
+        const aantal = opgave ? opgave.aantal : '?';
+        const uitnodigingen = deelnemer.uitnodigingen.map(value => html`<li>${new Date(value.datum).toLocaleString('nl', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: 'numeric'
+        })} - ${value.status}</li>`);
+        return html`<mwc-list-item twoline hasMeta graphic="avatar"
+                                   data-deelnemer-email="${deelnemer.email}"
+                                   style="background-color: ${this.isGenodigde(deelnemer) ? 'red' : 'transparant'}"
+                                   draggable="true"
+                                   @dragstart="${this._dragstart})">
+                    <span>${deelnemer.naam}</span>
+                    <span slot="secondary">${deelnemer.adres}, ${deelnemer.postcode} ${deelnemer.woonplaats}</span>
+                    <span slot="meta">${aantal}</span>
+                    <mwc-icon slot="graphic" class="inverted">${aantal > 1 ? 'people' : 'person'}</mwc-icon>
+                  </mwc-list-item>`;
+      })}
+            </mwc-list> <!-- #deelnemers -->
+            <div id="view">
+              <div id="stats" style="display: grid; grid-auto-flow: column">
+                <div>Aantal plekken:<br/>${aantalStoelen}</div>
+                <div>Plekken beschikbaar:<br/>${aantalStoelenBeschikbaar}</div>
+                <div>Plekken ingepland:<br/>${aantalStoelenIngepland}</div>
+              </div>
+              <div id="gebouw" style="display: grid; grid-template-rows: ${gridRowsTemplate}; grid-template-columns: ${gridColumnsTemplate};">
+
+              ${gebouw.props.map(prop => html`<div style="grid-row: ${prop.rij}; grid-column: ${prop.kolom}; background-color: ${prop.kleur}"></div>`)}
+
+                ${gebouw.stoelen.map((stoel, index) => {
+          const genodigde = this.findGenodigde(stoel);
+          const rotation = KerkPlanning.rotation(stoel.richting);
+          let styling = '';
+          let beschikbaar = false;
+          let title = 'Leeg';
+          if (genodigde) {
+            styling = 'background-color: red';
+            title = genodigde.naam;
+          } else if (stoel.beschikbaarheid == Beschikbaarheid.Gereserveerd) {
+            styling = 'background-color: cyan';
+            title = 'Gereserveerd';
+          } else if (beschikbareStoelen.includes(stoel)) {
+            styling = 'background-color: green';
+            beschikbaar = true;
+          }
+          return html`<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/Font_Awesome_5_solid_chair.svg"
+                         class="stoel"
+                         draggable="${!!genodigde}"
+                         data-stoel-index="${index}"
+                         data-deelnemer-email="${genodigde ? genodigde.email : ''}"
+                         title="${title}"
+                         style="grid-row: ${stoel.rij}; grid-column: ${stoel.kolom}; transform: rotate(${rotation}); ${styling}"
+                         ondragenter="return ${!beschikbaar}"
+                         ondragover="return ${!beschikbaar}"
+                         @dragstart="${this._dragstart}"
+                         @drop="${this._drop}" />`;
+        })}
+              </div> <!-- #gebouw -->
+            </div> <!-- #view -->
+          </div> <!-- #planning -->
+          <div class="${this.loading ? 'loading' : ''}"></div>
+        </div> <!-- #top-app-bar-content -->
+      </mwc-top-app-bar-fixed>
+    `;
+  }
 
   protected update(changedProperties: PropertyValues) {
     super.update(changedProperties)
@@ -147,6 +284,10 @@ export class KerkPlanning extends LitElement {
       return;
     }
 
+    const icon = el.getElementsByTagName('mwc-icon')?.item(0);
+    if (icon) {
+      event.dataTransfer?.setDragImage(icon, 0, 0);
+    }
     event.dataTransfer?.setData('text/plain', deelnemerEmail);
   }
 
@@ -286,128 +427,6 @@ export class KerkPlanning extends LitElement {
   _selecteerDatum(event: Event) {
     const el = event.target as HTMLInputElement;
     this.datum = new Date(el.value);
-  }
-
-  render() {
-    const gebouw = this.gebouwen[this.gebouwIndex]
-    if (!gebouw) {
-      console.log("Gebouw niet gevonden!");
-      return;
-    }
-
-    const aantalStoelen = gebouw.stoelen.length;
-    let beschikbareStoelen: Stoel[] = [];
-    let aantalStoelenBeschikbaar = 0;
-    let aantalStoelenIngepland = 0;
-    let gridRowsTemplate = css`100%`;
-    let gridColumnsTemplate = css`100%`;
-
-    if (aantalStoelen > 0) {
-      beschikbareStoelen = gebouw.stoelen.filter(stoel => this.isBeschikbaar(gebouw, stoel));
-      aantalStoelenIngepland = this.genodigden.filter(value => value.gebouw == gebouw.naam)
-        .map(value => value.stoelen.length)
-        .reduce((previousValue, currentValue) => previousValue + currentValue, 0);
-      aantalStoelenBeschikbaar = beschikbareStoelen.length;
-
-      const rijen = [...gebouw.stoelen.map(value => value.rij), ...gebouw.props.map(value => value.rij)]
-        .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
-      const kolommen = [...gebouw.stoelen.map(value => value.kolom), ...gebouw.props.map(value => value.kolom)]
-        .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
-      gridRowsTemplate = css`repeat(${rijen}, min((100vh - ${KerkPlanning.controlsHeight}px) / ${rijen}, (49vw - 20px) / ${kolommen}))`;
-      gridColumnsTemplate = css`repeat(${kolommen}, min((100vh - ${KerkPlanning.controlsHeight}px) / ${rijen}, (49vw - 20px) / ${kolommen}))`;
-    }
-
-    return html`
-      <div id="planning" xmlns="http://www.w3.org/1999/html">
-        <table id="deelnemers"
-               style="width: 49vw"
-               draggable="false"
-               ondragenter="return false"
-               ondragover="return false"
-               @drop="${this._reset}">
-          <thead>
-          <tr>
-            <th>Naam</th>
-            <th>Opgaven</th>
-            <th>Uitnodigingen</th>
-          </tr>
-          </thead>
-          <tbody>
-          ${this.deelnemers
-      .filter(deelnemer => this.kanIngeplandWorden(deelnemer))
-      .sort((a, b) => KerkPlanning.laatsteUitnodiging(a).getTime() - KerkPlanning.laatsteUitnodiging(b).getTime())
-      .map(deelnemer => html`
-            <tr>
-            <td style="background-color: ${this.isGenodigde(deelnemer) ? 'red' : 'transparant'}"
-                draggable="true"
-                data-deelnemer-email="${deelnemer.email}"
-                @dragstart="${this._dragstart})">${deelnemer.naam}</td>
-            <td><ul>${deelnemer.opgaven.map(value => html`<li>${value.dienst} - ${value.aantal} personen</li>`)}</ul></td>
-            <td><ul>${deelnemer.uitnodigingen.map(value => html`<li>${new Date(value.datum).toLocaleString('nl', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric'
-      })} - ${value.status}</li>`)}</ul></td>
-            </tr>
-          `)}
-          </tbody>
-        </table>
-
-        <div id="controls">
-          <div>Gebouw:<br/><select @change="${this._selecteerGebouw}">${this.gebouwen.map(((value, index) => html`<option value="${index}">${value.naam}</option>`))}</select></div>
-          <div>Tijdvak:<br/><select @change="${this._selecteerTijdvak}">${Object.keys(Tijdvak).map(value => html`<option value="${value}">${value}</option>`)}</select></div>
-          <div>Datum:<br/><input type="date" @change="${this._selecteerDatum}" value="${KerkPlanning.isoDatum(this.datum)}" /></div>
-          <div>Aantal plekken: ${aantalStoelen}</div>
-          <div>Plekken beschikbaar: ${aantalStoelenBeschikbaar}</div>
-          <div>Plekken ingepland: ${aantalStoelenIngepland}</div>
-          <button @click="${this._downloadPlanning}">Planning exporteren</button>
-          <button @click="${this._downloadLijst}">Lijst downloaden</button>
-          <button @click="${this._opslaanPlanning}">Planning opslaan</button>
-          <button @click="${this._verstuurUitnodigingen}">Uitnodigingen versturen</button>
-          <button @click="${this._resetPlanning}">Reset planning</button>
-        </div>
-
-        <div id="gebouw" style="grid-template-rows: ${gridRowsTemplate}; grid-template-columns: ${gridColumnsTemplate};">
-        ${gebouw.props.map(prop => html`
-        <div style="grid-row: ${prop.rij}; grid-column: ${prop.kolom}; background-color: ${prop.kleur}"></div>
-        `)}
-          ${gebouw.stoelen.map((stoel, index) => {
-      const genodigde = this.findGenodigde(stoel);
-      const rotation = KerkPlanning.rotation(stoel.richting);
-      let styling = '';
-      let beschikbaar = false;
-      let title = 'Leeg';
-      if (genodigde) {
-        styling = 'background-color: red';
-        title = genodigde.naam;
-      } else if (stoel.beschikbaarheid == Beschikbaarheid.Gereserveerd) {
-        styling = 'background-color: cyan';
-        title = 'Gereserveerd';
-      } else if (beschikbareStoelen.includes(stoel)) {
-        styling = 'background-color: green';
-        beschikbaar = true;
-      }
-      return html`
-          <img src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M112 128c0-29.5 16.2-55 40-68.9V256h48V48h48v208h48V59.1c23.8 13.9 40 39.4 40 68.9v128h48V128C384 57.3 326.7 0 256 0h-64C121.3 0 64 57.3 64 128v128h48zm334.3 213.9l-10.7-32c-4.4-13.1-16.6-21.9-30.4-21.9H42.7c-13.8 0-26 8.8-30.4 21.9l-10.7 32C-5.2 362.6 10.2 384 32 384v112c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V384h256v112c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V384c21.8 0 37.2-21.4 30.3-42.1z"/></svg>'
-               class="stoel"
-               draggable="${!!genodigde}"
-               data-stoel-index="${index}"
-               data-deelnemer-email="${genodigde ? genodigde.email : ''}"
-               title="${title}"
-               style="grid-row: ${stoel.rij}; grid-column: ${stoel.kolom}; transform: rotate(${rotation}); ${styling}"
-               ondragenter="return ${!beschikbaar}"
-               ondragover="return ${!beschikbaar}"
-               @dragstart="${this._dragstart}"
-               @drop="${this._drop}" />
-
-      `;
-    })}
-        </div>
-        <div class="${this.loading ? 'loading' : ''}"></div>
-      </div>
-    `;
   }
 
   private findDeelnemer(email: string): Deelnemer | undefined {
