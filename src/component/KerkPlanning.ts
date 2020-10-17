@@ -25,36 +25,29 @@ export class KerkPlanning extends LitElement {
       display: block;
     }
 
-    mwc-select {
-      margin: 0 10px;
-    }
-
     mwc-button {
       --mdc-theme-primary: #018786;
       --mdc-theme-on-primary: white;
       margin: 0 10px;
     }
 
-    #gebouwControl {
-      width: 300px;
-    }
-
-    #planning {
+    #view {
       display: grid;
       grid-template-columns: auto min-content;
       gap: 10px;
       padding: 10px;
     }
 
-    #view {
+    #controls {
       display: grid;
-      grid-template-rows: min-content auto;
+      grid-auto-flow: column;
       gap: 10px;
       padding: 10px;
+      text-align: center;
     }
 
     #deelnemers {
-      height: 92vh;
+      height: 80vh;
       overflow: auto;
     }
 
@@ -126,43 +119,39 @@ export class KerkPlanning extends LitElement {
     }
 
     const aantalStoelen = gebouw.stoelen.length;
-    let beschikbareStoelen: Stoel[] = [];
-    let aantalStoelenBeschikbaar = 0;
-    let aantalStoelenIngepland = 0;
-    let gridRowsTemplate = css`100%`;
-    let gridColumnsTemplate = css`100%`;
+    const aantalStoelenIngepland = this.genodigden.filter(value => value.gebouw == gebouw.naam)
+      .map(value => value.stoelen.length)
+      .reduce((previousValue, currentValue) => previousValue + currentValue, 0);
+    const beschikbareStoelen = gebouw.stoelen.filter(stoel => this.isBeschikbaar(gebouw, stoel));
+    const aantalStoelenBeschikbaar = beschikbareStoelen.length;
 
-    if (aantalStoelen > 0) {
-      beschikbareStoelen = gebouw.stoelen.filter(stoel => this.isBeschikbaar(gebouw, stoel));
-      aantalStoelenIngepland = this.genodigden.filter(value => value.gebouw == gebouw.naam)
-        .map(value => value.stoelen.length)
-        .reduce((previousValue, currentValue) => previousValue + currentValue, 0);
-      aantalStoelenBeschikbaar = beschikbareStoelen.length;
-
-      const rijen = [...gebouw.stoelen.map(value => value.rij), ...gebouw.props.map(value => value.rij)]
-        .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
-      const kolommen = [...gebouw.stoelen.map(value => value.kolom), ...gebouw.props.map(value => value.kolom)]
-        .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
-      gridRowsTemplate = css`repeat(${rijen}, min(88vh / ${rijen}, (59vw - 20px) / ${kolommen}))`;
-      gridColumnsTemplate = css`repeat(${kolommen}, min(88vh / ${rijen}, (59vw - 20px) / ${kolommen}))`;
-    }
+    const rijen = [...gebouw.stoelen.map(value => value.rij), ...gebouw.props.map(value => value.rij)]
+      .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
+    const kolommen = [...gebouw.stoelen.map(value => value.kolom), ...gebouw.props.map(value => value.kolom)]
+      .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
+    const cellSize = css`min(80vh / ${rijen}, (100vw - 570px) / ${kolommen})`;
 
     return html`
       <mwc-top-app-bar-fixed>
-        <div slot="title">KerkPlanning</div>
-        <mwc-select id="gebouwControl" label="Gebouw" slot="actionItems" value="${this.gebouwIndex}" @selected="${this._selecteerGebouw}">
-          ${this.gebouwen.map(((value, index) => html`<mwc-list-item value="${index}">${value.naam}</mwc-list-item>`))}
-        </mwc-select>
-        <mwc-select id="tijdvakControl" label="Tijdvak" slot="actionItems" value="${this.tijdvak}" @selected="${this._selecteerTijdvak}">
-          ${Object.keys(Tijdvak).map(value => html`<mwc-list-item value="${value}">${value}</mwc-list-item>`)}
-        </mwc-select>
+        <!--<div slot="title">KerkPlanning</div>-->
         <mwc-button raised label="Planning exporteren" icon="archive" slot="actionItems" @click="${this._downloadPlanning}"></mwc-button>
         <mwc-button raised label="Lijst downloaden" icon="list" slot="actionItems" @click="${this._downloadLijst}"></mwc-button>
         <mwc-button raised label="Planning opslaan" icon="save_alt" slot="actionItems" @click="${this._opslaanPlanning}"></mwc-button>
         <mwc-button raised label="Reset planning" icon="restore" slot="actionItems" @click="${this._resetPlanning}"></mwc-button>
         <mwc-fab extended label="Uitnodigingen versturen" icon="send" slot="actionItems" @click="${this._verstuurUitnodigingen}"></mwc-fab>
         <div>
-          <div id="planning">
+          <div id="controls">
+            <mwc-select label="Gebouw" slot="actionItems" value="${this.gebouwIndex}" @selected="${this._selecteerGebouw}">
+              ${this.gebouwen.map(((value, index) => html`<mwc-list-item value="${index}">${value.naam}</mwc-list-item>`))}
+            </mwc-select>
+            <mwc-select label="Tijdvak" slot="actionItems" value="${this.tijdvak}" @selected="${this._selecteerTijdvak}">
+              ${Object.keys(Tijdvak).map(value => html`<mwc-list-item value="${value}">${value}</mwc-list-item>`)}
+            </mwc-select>
+            <div>Aantal plekken:<br/>${aantalStoelen}</div>
+            <div>Plekken beschikbaar:<br/>${aantalStoelenBeschikbaar}</div>
+            <div>Plekken ingepland:<br/>${aantalStoelenIngepland}</div>
+          </div>
+          <div id="view">
             <mwc-list id="deelnemers"
                       ondragenter="return false"
                       ondragover="return false"
@@ -183,7 +172,7 @@ export class KerkPlanning extends LitElement {
                                    data-deelnemer-email="${deelnemer.email}"
                                    style="background-color: ${this.isGenodigde(deelnemer) ? 'red' : 'transparant'}"
                                    draggable="true"
-                                   @dragstart="${this._dragstart})">
+                                   @dragstart="${this._drag})">
                     <span>${deelnemer.naam}</span>
                     <span slot="secondary">${deelnemer.adres}, ${deelnemer.postcode} ${deelnemer.woonplaats}</span>
                     <span slot="meta">${aantal}</span>
@@ -191,46 +180,39 @@ export class KerkPlanning extends LitElement {
                   </mwc-list-item>`;
       })}
             </mwc-list> <!-- #deelnemers -->
-            <div id="view">
-              <div id="stats" style="display: grid; grid-auto-flow: column">
-                <div>Aantal plekken:<br/>${aantalStoelen}</div>
-                <div>Plekken beschikbaar:<br/>${aantalStoelenBeschikbaar}</div>
-                <div>Plekken ingepland:<br/>${aantalStoelenIngepland}</div>
-              </div>
-              <div id="gebouw" style="display: grid; grid-template-rows: ${gridRowsTemplate}; grid-template-columns: ${gridColumnsTemplate};">
+            <div id="gebouw" style="display: grid; grid-template-rows: repeat(${rijen}, ${cellSize}); grid-template-columns: repeat(${kolommen}, ${cellSize});">
 
-              ${gebouw.props.map(prop => html`<div style="grid-row: ${prop.rij}; grid-column: ${prop.kolom}; background-color: ${prop.kleur}"></div>`)}
+            ${gebouw.props.map(prop => html`<div style="grid-row: ${prop.rij}; grid-column: ${prop.kolom}; background-color: ${prop.kleur}"></div>`)}
 
-                ${gebouw.stoelen.map((stoel, index) => {
-          const genodigde = this.findGenodigde(stoel);
-          const rotation = KerkPlanning.rotation(stoel.richting);
-          let styling = '';
-          let beschikbaar = false;
-          let title = 'Leeg';
-          if (genodigde) {
-            styling = 'background-color: red';
-            title = genodigde.naam;
-          } else if (stoel.beschikbaarheid == Beschikbaarheid.Gereserveerd) {
-            styling = 'background-color: cyan';
-            title = 'Gereserveerd';
-          } else if (beschikbareStoelen.includes(stoel)) {
-            styling = 'background-color: green';
-            beschikbaar = true;
-          }
-          return html`<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/Font_Awesome_5_solid_chair.svg"
-                         class="stoel"
-                         draggable="${!!genodigde}"
-                         data-stoel-index="${index}"
-                         data-deelnemer-email="${genodigde ? genodigde.email : ''}"
-                         title="${title}"
-                         style="grid-row: ${stoel.rij}; grid-column: ${stoel.kolom}; transform: rotate(${rotation}); ${styling}"
-                         ondragenter="return ${!beschikbaar}"
-                         ondragover="return ${!beschikbaar}"
-                         @dragstart="${this._dragstart}"
-                         @drop="${this._drop}" />`;
-        })}
-              </div> <!-- #gebouw -->
-            </div> <!-- #view -->
+              ${gebouw.stoelen.map((stoel, index) => {
+    const genodigde = this.findGenodigde(stoel);
+    const rotation = KerkPlanning.rotation(stoel.richting);
+    let styling = '';
+    let beschikbaar = false;
+    let title = 'Leeg';
+    if (genodigde) {
+      styling = 'background-color: red';
+      title = genodigde.naam;
+    } else if (stoel.beschikbaarheid == Beschikbaarheid.Gereserveerd) {
+      styling = 'background-color: cyan';
+      title = 'Gereserveerd';
+    } else if (beschikbareStoelen.includes(stoel)) {
+      styling = 'background-color: green';
+      beschikbaar = true;
+    }
+    return html`<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/Font_Awesome_5_solid_chair.svg"
+                       class="stoel"
+                       draggable="${!!genodigde}"
+                       data-stoel-index="${index}"
+                       data-deelnemer-email="${genodigde ? genodigde.email : ''}"
+                       title="${title}"
+                       style="grid-row: ${stoel.rij}; grid-column: ${stoel.kolom}; transform: rotate(${rotation}); ${styling}"
+                       ondragenter="return ${!beschikbaar}"
+                       ondragover="return ${!beschikbaar}"
+                       @dragstart="${this._drag}"
+                       @drop="${this._drop}" />`;
+  })}
+            </div> <!-- #gebouw -->
           </div> <!-- #planning -->
           <div class="${this.loading ? 'loading' : ''}"></div>
         </div> <!-- #top-app-bar-content -->
@@ -273,7 +255,7 @@ export class KerkPlanning extends LitElement {
     }
   }
 
-  _dragstart(event: DragEvent) {
+  _drag(event: DragEvent) {
     const el = event.target as Element;
     if (!el || !el.getAttribute) {
       return;

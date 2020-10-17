@@ -1,3 +1,3 @@
-import { KerkPlanning } from './KerkPlanning.js';
+import { KerkPlanning } from './KerkPlanning';
 
 window.customElements.define('kerk-planning', KerkPlanning);

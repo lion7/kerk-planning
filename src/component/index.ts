@@ -1,1 +1,1 @@
-export { KerkPlanning } from './KerkPlanning.js';
+export { KerkPlanning } from './KerkPlanning';

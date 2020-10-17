@@ -1,12 +1,9 @@
 import merge from 'deepmerge';
 import execute from 'rollup-plugin-execute'
-
-// use createSpaConfig for bundling a Single Page App
-// import { createSpaConfig } from '@open-wc/building-rollup';
+import {createBasicConfig} from '@open-wc/building-rollup';
 
 // use createBasicConfig to do regular JS to JS bundling
-import { createBasicConfig } from '@open-wc/building-rollup';
-
+// alternatively use createSpaConfig for bundling a Single Page App
 const baseConfig = createBasicConfig({
   // use the outputdir option to modify where files are output
   outputDir: 'dist',
@@ -35,7 +32,6 @@ export default merge(baseConfig, {
   },
 
   plugins: [
-    // Open the browser when the bundle is generated
     execute('bash -c "sed \'/<script type=\\"module\\">/r dist/kerk-planning.min.js\' src/gas/Index.html > dist/Index.html"')
   ]
 });
