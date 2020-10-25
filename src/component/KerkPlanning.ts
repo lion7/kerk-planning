@@ -13,11 +13,15 @@ import {
 import '@webcomponents/webcomponentsjs/webcomponents-loader';
 import '@material/mwc-icon';
 import '@material/mwc-button';
+import '@material/mwc-dialog';
 import '@material/mwc-fab';
 import '@material/mwc-list';
 import '@material/mwc-list/mwc-list-item';
 import '@material/mwc-select';
 import '@material/mwc-top-app-bar-fixed';
+import 'app-datepicker';
+import {Dialog} from "@material/mwc-dialog/mwc-dialog";
+import {Datepicker} from "app-datepicker/dist/datepicker";
 
 export class KerkPlanning extends LitElement {
   static styles = css`
@@ -106,6 +110,7 @@ export class KerkPlanning extends LitElement {
   };
 
   @property({type: Boolean}) private loading = false;
+  @property({type: Boolean}) private datumKiezen = false;
   @property({type: Number}) private gebouwIndex = 0;
   @property({type: String}) private datum = KerkPlanning.volgendeZondag();
   @property({type: String}) private tijdvak = Tijdvak.Ochtend;
@@ -140,6 +145,11 @@ export class KerkPlanning extends LitElement {
         <mwc-button raised label="Reset planning" icon="restore" slot="actionItems" @click="${this._resetPlanning}"></mwc-button>
         <mwc-fab extended label="Uitnodigingen versturen" icon="send" slot="actionItems" @click="${this._verstuurUitnodigingen}"></mwc-fab>
         <div>
+          <mwc-dialog id="datumKiezer">
+            <app-datepicker value="${KerkPlanning.isoDatum(this.datum)}"></app-datepicker>
+            <mwc-button slot="secondaryAction" dialogAction="cancel">Annuleren</mwc-button>
+            <mwc-button slot="primaryAction" dialogAction="set" @click="${this._selecteerDatum}">OK</mwc-button>
+          </mwc-dialog>
           <div id="controls">
             <mwc-select label="Gebouw" slot="actionItems" value="${this.gebouwIndex}" @selected="${this._selecteerGebouw}">
               ${this.gebouwen.map(((value, index) => html`<mwc-list-item value="${index}">${value.naam}</mwc-list-item>`))}
@@ -147,6 +157,8 @@ export class KerkPlanning extends LitElement {
             <mwc-select label="Tijdvak" slot="actionItems" value="${this.tijdvak}" @selected="${this._selecteerTijdvak}">
               ${Object.keys(Tijdvak).map(value => html`<mwc-list-item value="${value}">${value}</mwc-list-item>`)}
             </mwc-select>
+            <mwc-button label="Datum: ${KerkPlanning.isoDatum(this.datum)}" icon="calendar" @click="${this._openDatumKiezer}">
+            </mwc-button>
             <div>Aantal plekken:<br/>${aantalStoelen}</div>
             <div>Plekken beschikbaar:<br/>${aantalStoelenBeschikbaar}</div>
             <div>Plekken ingepland:<br/>${aantalStoelenIngepland}</div>
@@ -170,12 +182,13 @@ export class KerkPlanning extends LitElement {
         })} - ${value.status}</li>`);
         return html`<mwc-list-item twoline hasMeta graphic="avatar"
                                    data-deelnemer-email="${deelnemer.email}"
-                                   style="background-color: ${this.isGenodigde(deelnemer) ? 'red' : 'transparant'}"
+                                   style="background-color: ${this.isGenodigde(deelnemer) ? 'red' : 'transparent'}; height: min-content"
                                    draggable="true"
                                    @dragstart="${this._drag})">
                     <span>${deelnemer.naam}</span>
                     <span slot="secondary">${deelnemer.adres}, ${deelnemer.postcode} ${deelnemer.woonplaats}</span>
-                    <span slot="meta">${aantal}</span>
+                    <span slot="secondary"><ul>${uitnodigingen}</ul></span>
+                    <mwc-icon slot="meta">filter_${aantal}</mwc-icon>
                     <mwc-icon slot="graphic" class="inverted">${aantal > 1 ? 'people' : 'person'}</mwc-icon>
                   </mwc-list-item>`;
       })}
@@ -185,22 +198,22 @@ export class KerkPlanning extends LitElement {
             ${gebouw.props.map(prop => html`<div style="grid-row: ${prop.rij}; grid-column: ${prop.kolom}; background-color: ${prop.kleur}"></div>`)}
 
               ${gebouw.stoelen.map((stoel, index) => {
-    const genodigde = this.findGenodigde(stoel);
-    const rotation = KerkPlanning.rotation(stoel.richting);
-    let styling = '';
-    let beschikbaar = false;
-    let title = 'Leeg';
-    if (genodigde) {
-      styling = 'background-color: red';
-      title = genodigde.naam;
-    } else if (stoel.beschikbaarheid == Beschikbaarheid.Gereserveerd) {
-      styling = 'background-color: cyan';
-      title = 'Gereserveerd';
-    } else if (beschikbareStoelen.includes(stoel)) {
-      styling = 'background-color: green';
-      beschikbaar = true;
-    }
-    return html`<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/Font_Awesome_5_solid_chair.svg"
+      const genodigde = this.findGenodigde(stoel);
+      const rotation = KerkPlanning.rotation(stoel.richting);
+      let styling = '';
+      let beschikbaar = false;
+      let title = 'Leeg';
+      if (genodigde) {
+        styling = 'background-color: red';
+        title = genodigde.naam;
+      } else if (stoel.beschikbaarheid == Beschikbaarheid.Gereserveerd) {
+        styling = 'background-color: cyan';
+        title = 'Gereserveerd';
+      } else if (beschikbareStoelen.includes(stoel)) {
+        styling = 'background-color: green';
+        beschikbaar = true;
+      }
+      return html`<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/Font_Awesome_5_solid_chair.svg"
                        class="stoel"
                        draggable="${!!genodigde}"
                        data-stoel-index="${index}"
@@ -211,7 +224,7 @@ export class KerkPlanning extends LitElement {
                        ondragover="return ${!beschikbaar}"
                        @dragstart="${this._drag}"
                        @drop="${this._drop}" />`;
-  })}
+    })}
             </div> <!-- #gebouw -->
           </div> <!-- #planning -->
           <div class="${this.loading ? 'loading' : ''}"></div>
@@ -253,6 +266,11 @@ export class KerkPlanning extends LitElement {
         }
       });
     }
+  }
+
+  _openDatumKiezer(event: Event) {
+    const el = this.shadowRoot?.querySelector('#datumKiezer') as Dialog;
+    el.show();
   }
 
   _drag(event: DragEvent) {
@@ -407,7 +425,7 @@ export class KerkPlanning extends LitElement {
   }
 
   _selecteerDatum(event: Event) {
-    const el = event.target as HTMLInputElement;
+    const el = this.shadowRoot?.querySelector('#datumKiezer')?.firstElementChild as Datepicker;
     this.datum = new Date(el.value);
   }
 
@@ -416,7 +434,12 @@ export class KerkPlanning extends LitElement {
   }
 
   private findGenodigde(stoel: Stoel): Genodigde | undefined {
-    return this.genodigden.find(value => value.stoelen.some(s => s.rij == stoel.rij && s.kolom == stoel.kolom));
+    const gebouw = this.gebouwen[this.gebouwIndex]
+    if (!gebouw) {
+      console.log("Gebouw niet gevonden!");
+      return undefined;
+    }
+    return this.genodigden.find(value => value.gebouw == gebouw.naam && value.stoelen.some(s => s.rij == stoel.rij && s.kolom == stoel.kolom));
   }
 
   private findOpgave(deelnemer: Deelnemer): Opgave | undefined {
