@@ -14,7 +14,10 @@
         google.script.run.withSuccessHandler(result => kp.deelnemers = result).getDeelnemers();
         kp.ophalen = (datum, tijdvak, handler) => { google.script.run.withSuccessHandler(handler).ophalen(datum, tijdvak); };
         kp.opslaan = (planning, handler) => { google.script.run.withSuccessHandler(handler).opslaan(planning); };
-        kp.uitnodigen = (planning, handler) => { google.script.run.withSuccessHandler(handler).uitnodigen(planning); };
+        kp.uitnodigen = (planning, handler) => { google.script.run.withSuccessHandler(result => {
+          handler(result);
+          google.script.run.withSuccessHandler(result => kp.deelnemers = result).getDeelnemers();
+        }).uitnodigen(planning); };
     </script>
   </body>
 </html>

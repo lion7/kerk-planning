@@ -260,10 +260,8 @@ export class KerkPlanning extends LitElement {
       this.loading = true;
       this.ophalen(KerkPlanning.isoDatum(this.datum), this.tijdvak, planning => {
         this.loading = false;
-        if (planning) {
-          this.genodigden = planning.genodigden;
-          console.log(`Planning opgehaald met ${planning.genodigden.length} genodigden`);
-        }
+        this.genodigden = planning ? planning.genodigden : [];
+        console.log(`Planning opgehaald met ${this.genodigden.length} genodigden`);
       });
     }
   }
