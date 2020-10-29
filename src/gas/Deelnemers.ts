@@ -27,8 +27,7 @@ function createDeelnemer(row: any[], headerRow: string[]): Deelnemer {
 
 function getDeelnemers(): Deelnemer[] {
   const sheet = SpreadsheetApp.getActiveSheet();
-  const range = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
-  const deelnemers = range.getValues();
+  const deelnemers = sheet.getDataRange().getValues();
   const headerRow = deelnemers[0];
   const result: Deelnemer[] = [];
   for (let i = 1; i < deelnemers.length; i++) {

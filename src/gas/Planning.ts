@@ -61,10 +61,12 @@ function uitnodigen(planning: Planning): number {
 
   const calendar = CalendarApp.getDefaultCalendar();
   const reedsGenodigden: string[] = [];
+  const verdwenenGenodigden: string[] = [];
   calendar.getEvents(startTijd, eindTijd, {'search': 'Uitnodiging'}).forEach(event => event.getGuestList().forEach(guest => {
     const email = guest.getEmail();
     reedsGenodigden.push(email);
     if (!planning.genodigden.some(genodigde => genodigde.email === email)) {
+      verdwenenGenodigden.push(email);
       event.removeGuest(email);
       if (event.getGuestList().length == 0) {
         event.deleteEvent();
@@ -151,6 +153,17 @@ Kerkenraden Hervormde Gemeente Genemuiden`,
       sheet.appendRow(['Naam', 'Aantal', 'Email'])
     }
     sheet.appendRow([genodigde.naam, genodigde.aantal, genodigde.email]);
+  });
+  verdwenenGenodigden.forEach(email => {
+    spreadsheet.getSheets().forEach(sheet => {
+      const rows = sheet.getDataRange().getValues();
+      for (let i = 1; i < rows.length; i++) {
+        if (rows[i][3] === email) {
+          sheet.deleteRow(i);
+          break;
+        }
+      }
+    });
   });
 
   const blad1 = spreadsheet.getSheetByName('Blad1');

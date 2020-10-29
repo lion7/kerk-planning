@@ -40,8 +40,7 @@ function createIngang(row: any[]): GebouwIngang {
 
 function getIngangen(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet): GebouwIngang[] {
   const sheet = spreadsheet.getSheets()[0];
-  const range = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
-  const ingangen = range.getValues();
+  const ingangen = sheet.getDataRange().getValues();
   const result: GebouwIngang[] = [];
   for (let i = 1; i < ingangen.length; i++) {
     const ingang = createIngang(ingangen[i]);
@@ -69,7 +68,7 @@ function createGebouw(sheet: GoogleAppsScript.Spreadsheet.Sheet, ingangen: Gebou
   if (cached != null) {
     return JSON.parse(cached);
   }
-  const range = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
+  const range = sheet.getDataRange();
   const indeling = range.getValues();
   const backgrounds = range.getBackgrounds();
   const stoelen: Stoel[] = [];
