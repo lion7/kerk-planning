@@ -513,22 +513,28 @@ export class KerkPlanning extends LitElement {
   private static ingang(gebouw: Gebouw, stoel: Stoel): string {
     const ingang = gebouw.ingangen.find(ingang => {
       let matches = true;
-      if (ingang.richting) {
+      let predicates = 0;
+      if (ingang.richting !== undefined) {
         matches = matches && stoel.richting == ingang.richting;
+        predicates++;
       }
-      if (ingang.vanRij) {
+      if (ingang.vanRij !== undefined) {
         matches = matches && stoel.rij > ingang.vanRij;
+        predicates++;
       }
-      if (ingang.totRij) {
+      if (ingang.totRij !== undefined) {
         matches = matches && stoel.rij < ingang.totRij;
+        predicates++;
       }
-      if (ingang.vanKolom) {
+      if (ingang.vanKolom !== undefined) {
         matches = matches && stoel.kolom > ingang.vanKolom;
+        predicates++;
       }
-      if (ingang.totKolom) {
+      if (ingang.totKolom !== undefined) {
         matches = matches && stoel.kolom < ingang.totKolom;
+        predicates++;
       }
-      return matches;
+      return predicates > 0 && matches;
     });
     return ingang ? ingang.naam : 'onbekend';
   }
