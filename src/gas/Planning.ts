@@ -93,35 +93,34 @@ function uitnodigen(planning: Planning): number {
     const event = calendar.createEvent(title, startTijd, eindTijd, {
       description: `Geachte ${genodigde.naam},
 
-Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen,kunnen wij u hierbij meedelen dat u
+Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen, kunnen wij u hierbij meedelen dat u
 ${huisgenotenTekst} bent ingedeeld om op D.V. ${datum} de ${dienst} bij te wonen.
 U wordt hartelijk uitgenodigd voor deze dienst.
 
-U wordt verzocht om onderstaande regels in acht te nemen,
 • U wordt verwacht bij de ingang ${genodigde.ingang}.
 • De deuren van de kerk gaan open om ${tijdstip} uur
 • U wordt hier opgewacht door een uitgangshulp. Deze zal uw naam aantekenen op een lijst die wij moeten
-bijhouden (om bij eventuele nieuwe uitbraken te kunnen achterhalen met wie bepaalde personen in
-aanraking zijn geweest). Wij verzoeken u de aanwijzingen van de uitgangshulp op te volgen, deze zal u de
-plaats aanwijzen waar u plaats dient te nemen, dit om de gewenste afstand tot andere kerkbezoekers te
-kunnen waarborgen. Dit heeft tot gevolg dat u zeer waarschijnlijk niet op de plaats komt te zitten waar u
-gewoonlijk zit. Wij vragen hierbij om uw begrip.
-• Indien u een overjas aan heeft, neemt u deze mee naar uw zitplaats in de kerk. (U bent uiteraard
-vrij om deze uit te doen en eventueel op de bank of een stoel naast u te leggen). De garderobes
-zijn gesloten.
+  bijhouden (om bij eventuele nieuwe uitbraken te kunnen achterhalen met wie bepaalde personen in
+  aanraking zijn geweest). Wij verzoeken u de aanwijzingen van de uitgangshulp op te volgen, deze zal aanwijzen
+  waar u plaats dient te nemen, dit om de gewenste afstand tot andere kerkbezoekers te kunnen waarborgen.
+  Dit heeft tot gevolg dat u zeer waarschijnlijk niet op de plaats komt te zitten waar u gewoonlijk zit.
+  Wij vragen hierbij om uw begrip.
+• Indien u een overjas aan heeft, wilt u deze dan meenemen naar uw zitplaats. (U bent uiteraard
+  vrij om deze uit te doen en eventueel op de bank of een stoel naast u te leggen). De garderobes
+  zijn gesloten.
 • U checkt van tevoren uw gezondheidstoestand en van uw eventuele gezinsleden m.b.t. corona
-gerelateerde klachten. Bij klachten dient u thuis te blijven.
+  gerelateerde klachten. Bij klachten dient u thuis te blijven.
 • Bij het uitgaan van de dienst wordt u verzocht om voldoende afstand van de andere
-kerkgangers te bewaren, ook bij de collectebussen. Degene die achterin de kerk zit, verlaat
-als eerste het gebouw. Wij verlaten de kerk van achteren naar voren. U verlaat de kerk door
-dezelfde deur als waar u naar binnen bent gekomen.
-Het gaat om uw eigen gezondheid, maar zeker ook om de gezondheid van de ander.
+  kerkgangers te bewaren, ook bij de collectebussen. Degene die achterin de kerk zit, verlaat
+  als eerste het gebouw. Wij verlaten de kerk van achteren naar voren. U verlaat de kerk door
+  dezelfde deur als waar u naar binnen bent gekomen.
+  Het gaat om uw eigen gezondheid, maar zeker ook om de gezondheid van de ander.
 
 Wij verzoeken u te bevestigen dat u (met uw huisgenoten) voornemens bent de dienst bij te wonen, ook al
-met er minder dan bevestigd u met JA. Kan er niemand komen dan geeft u dat aan met NEE. Wij zullen dan
-iemand anders proberen uit te nodigen
+is dat met minder personen. U bevestigt dan met JA.  Kan er niemand komen dan geeft u dat aan met NEE.
+Wij zullen dan iemand anders proberen uit te nodigen.
 
-Wij wensen u van harte Gods zegen toe onder bediening van het Woord,
+Wij wensen u van harte Gods zegen toe onder de bediening van het Woord,
 Kerkenraden Hervormde Gemeente Genemuiden`,
       location: gebouw,
       guests: genodigde.email,
