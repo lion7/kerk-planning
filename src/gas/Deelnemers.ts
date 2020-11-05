@@ -49,6 +49,7 @@ function getDeelnemers(): Deelnemer[] {
       if (deelnemer) {
         deelnemer.uitnodigingen.push({
           datum: event.getStartTime().toISOString(),
+          gebouw: event.getLocation(),
           status: guest.getGuestStatus().toString()
         });
       }

@@ -1,5 +1,6 @@
 export interface Uitnodiging {
   datum: string;
+  gebouw: string;
   status: string;
 }
 

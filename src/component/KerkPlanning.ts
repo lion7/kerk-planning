@@ -179,7 +179,7 @@ export class KerkPlanning extends LitElement {
           year: 'numeric',
           hour: 'numeric',
           minute: 'numeric'
-        })} - ${value.status}</li>`);
+        })} - ${value.gebouw} - ${value.status}</li>`);
         return html`<mwc-list-item twoline hasMeta graphic="avatar"
                                    data-deelnemer-email="${deelnemer.email}"
                                    style="background-color: ${this.isGenodigde(deelnemer) ? 'red' : 'transparent'}; height: min-content"
