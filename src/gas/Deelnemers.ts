@@ -14,7 +14,7 @@ function createDeelnemer(row: any[], headerRow: string[]): Deelnemer {
     });
   }
   return {
-    email: row[1],
+    email: row[1].toLowerCase(),
     naam: row[2],
     adres: row[3],
     postcode: row[4],
