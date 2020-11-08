@@ -1,7 +1,4 @@
-import {
-  Deelnemer,
-  Opgave,
-} from "../common/Model";
+import {Deelnemer, Opgave,} from "../common/Model";
 
 function createDeelnemer(row: any[], headerRow: string[]): Deelnemer {
   const opgaven: Opgave[] = [];
@@ -45,13 +42,22 @@ function getDeelnemers(): Deelnemer[] {
   to.setMonth(now.getMonth() + 3);
   calendar.getEvents(from, to, {'search': 'Uitnodiging'}).forEach(event => {
     event.getGuestList().forEach(guest => {
-      const deelnemer = result.find(value => value.email === guest.getEmail());
-      if (deelnemer) {
-        deelnemer.uitnodigingen.push({
-          datum: event.getStartTime().toISOString(),
-          gebouw: event.getLocation(),
-          status: guest.getGuestStatus().toString()
-        });
+      const email = guest.getEmail();
+      const status = guest.getGuestStatus().toString();
+      if (status === 'NO') {
+        event.removeGuest(email);
+        if (event.getGuestList().length == 0) {
+          event.deleteEvent();
+        }
+      } else {
+        const deelnemer = result.find(value => value.email === email);
+        if (deelnemer) {
+          deelnemer.uitnodigingen.push({
+            datum: event.getStartTime().toISOString(),
+            gebouw: event.getLocation(),
+            status: status
+          });
+        }
       }
     });
   });

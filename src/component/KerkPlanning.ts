@@ -519,7 +519,7 @@ export class KerkPlanning extends LitElement {
         predicates++;
       }
       if (ingang.vanRij !== undefined) {
-        matches = matches && stoel.rij > ingang.vanRij;
+        matches = matches && stoel.rij >= ingang.vanRij;
         predicates++;
       }
       if (ingang.totRij !== undefined) {
@@ -527,7 +527,7 @@ export class KerkPlanning extends LitElement {
         predicates++;
       }
       if (ingang.vanKolom !== undefined) {
-        matches = matches && stoel.kolom > ingang.vanKolom;
+        matches = matches && stoel.kolom >= ingang.vanKolom;
         predicates++;
       }
       if (ingang.totKolom !== undefined) {

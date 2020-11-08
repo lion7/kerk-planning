@@ -1,4 +1,9 @@
 import {Planning, Tijdvak} from "../common/Model";
+import CalendarEventUpdated = GoogleAppsScript.Events.CalendarEventUpdated;
+
+function onEventUpdated(event: CalendarEventUpdated) {
+  Logger.log(event);
+}
 
 function isoDatum(date: Date): string {
   const datum = date.toISOString();
