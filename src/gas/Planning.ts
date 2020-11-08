@@ -69,8 +69,9 @@ function uitnodigen(planning: Planning): number {
   const verdwenenGenodigden: string[] = [];
   calendar.getEvents(startTijd, eindTijd, {'search': 'Uitnodiging'}).forEach(event => event.getGuestList().forEach(guest => {
     const email = guest.getEmail().toLowerCase();
+    const status = guest.getGuestStatus().toString();
     reedsGenodigden.push(email);
-    if (!planning.genodigden.some(genodigde => genodigde.email === email)) {
+    if (status === 'NO' || !planning.genodigden.some(genodigde => genodigde.email === email)) {
       verdwenenGenodigden.push(email);
       event.removeGuest(email);
       if (event.getGuestList().length == 0) {

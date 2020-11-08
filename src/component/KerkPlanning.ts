@@ -211,6 +211,7 @@ export class KerkPlanning extends LitElement {
         title = 'Gereserveerd';
       } else if (beschikbareStoelen.includes(stoel)) {
         styling = 'background-color: green';
+        title = 'Beschikbaar';
         beschikbaar = true;
       }
       return html`<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/Font_Awesome_5_solid_chair.svg"
