@@ -97,7 +97,6 @@ function createGebouw(sheet: GoogleAppsScript.Spreadsheet.Sheet, ingangen: Gebou
     stoelen: stoelen,
     props: props
   };
-  CacheService.getScriptCache()?.put(naam, JSON.stringify(result), 86400);
   return result;
 }
 
