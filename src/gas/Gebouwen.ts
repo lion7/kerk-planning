@@ -64,10 +64,6 @@ function convertBeschikbaarheid(bg: string): Beschikbaarheid {
 
 function createGebouw(sheet: GoogleAppsScript.Spreadsheet.Sheet, ingangen: GebouwIngang[]): Gebouw {
   const naam = sheet.getName();
-  const cached = CacheService.getScriptCache()?.get(naam);
-  if (cached != null) {
-    return JSON.parse(cached);
-  }
   const range = sheet.getDataRange();
   const indeling = range.getValues();
   const backgrounds = range.getBackgrounds();
