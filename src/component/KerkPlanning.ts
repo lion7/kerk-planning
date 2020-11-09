@@ -157,14 +157,24 @@ export class KerkPlanning extends LitElement {
         const aantal = opgave ? opgave.aantal : '?';
         const uitnodigingen = deelnemer.uitnodigingen.map(value => html`<li>${new Date(value.datum).toLocaleString('nl', {
           day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-          hour: 'numeric',
-          minute: 'numeric'
+          month: 'numeric',
+          year: 'numeric'
         })} - ${value.dienst} - ${value.status}</li>`);
+
+        let styling = '';
+        if (this.isGenodigde(deelnemer)) {
+          const status = deelnemer.uitnodigingen?.find(value => value.datum == this.datum.toISOString() && value.dienst == this.dienst)?.status;
+          if (status === 'YES') {
+            styling = 'background-color: red';
+          } else if (status === 'NO') {
+            styling = 'background-color: yellow';
+          } else {
+            styling = 'background-color: orange';
+          }
+        }
         return html`<mwc-list-item twoline hasMeta graphic="avatar"
                              data-deelnemer-email="${deelnemer.email}"
-                             style="background-color: ${this.isGenodigde(deelnemer) ? 'red' : 'transparent'}; height: min-content"
+                             style="height: min-content; ${styling}"
                              draggable="true"
                              @dragstart="${this._drag})">
               <span>${deelnemer.naam}</span>
@@ -210,7 +220,7 @@ export class KerkPlanning extends LitElement {
       let title = 'Leeg';
       if (genodigde) {
         title = genodigde.naam;
-        const status = this.findDeelnemer(genodigde.email)?.uitnodigingen?.find(value => value.datum == isoDatum(this.datum) && value.dienst == this.dienst)?.status;
+        const status = this.findDeelnemer(genodigde.email)?.uitnodigingen?.find(value => value.datum == this.datum.toISOString() && value.dienst == this.dienst)?.status;
         if (status === 'YES') {
           styling = 'background-color: red';
         } else if (status === 'NO') {
