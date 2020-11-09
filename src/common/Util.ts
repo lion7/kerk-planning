@@ -1,4 +1,10 @@
-import {Deelnemer, Gebouw, Richting, Stoel, Tijdstippen, Tijdvak} from "./Model";
+import {Deelnemer, Gebouw, Richting, Stoel} from "./Model";
+
+export function isDST(datum: Date) {
+  const jan = new Date(datum.getFullYear(), 0, 1).getTimezoneOffset();
+  const jul = new Date(datum.getFullYear(), 6, 1).getTimezoneOffset();
+  return Math.max(jan, jul) != datum.getTimezoneOffset();
+}
 
 export function isHorizontaal(richting: Richting) {
   return richting === Richting.Noord || richting === Richting.Zuid;
@@ -38,38 +44,12 @@ export function bepaalRichting(char: any): Richting | undefined {
   }
 }
 
-export function bepaalTijdstippen(datum: Date, tijdvak: Tijdvak): Tijdstippen {
-  const openingsTijd = new Date(datum);
-  const startTijd = new Date(datum);
-  const eindTijd = new Date(datum);
-  switch (tijdvak) {
-    case Tijdvak.Ochtend:
-      openingsTijd.setHours(9, 10, 0, 0);
-      startTijd.setHours(9, 30, 0, 0);
-      eindTijd.setHours(11, 0, 0, 0);
-      break;
-    case Tijdvak.Middag:
-      openingsTijd.setHours(15, 10, 0, 0);
-      startTijd.setHours(15, 30, 0, 0);
-      eindTijd.setHours(17, 0, 0, 0);
-      break;
-    case Tijdvak.Avond:
-      openingsTijd.setHours(18, 40, 0, 0);
-      startTijd.setHours(19, 0, 0, 0);
-      eindTijd.setHours(20, 30, 0, 0);
-      break;
-  }
-
-  return {
-    openingsTijd: openingsTijd,
-    startTijd: startTijd,
-    eindTijd: eindTijd
-  }
+export function isoDatum(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 }
 
-export function isoDatum(date: Date): string {
-  const datum = date.toISOString();
-  return datum.substring(0, datum.indexOf('T'));
+export function isoTijd(date: Date): string {
+  return `${date.getHours()}:${date.getMinutes()}`;
 }
 
 export function volgendeZondag(): Date {

@@ -43,14 +43,14 @@ function getDeelnemers(): Deelnemer[] {
   calendar.getEvents(from, to, {'search': 'Uitnodiging'}).forEach(event => {
     event.getGuestList().forEach(guest => {
       const datum = event.getStartTime().toISOString();
-      const gebouw = event.getLocation();
+      const dienst = event.getTitle().replace("Uitnodiging ", "").trim();
       const email = guest.getEmail();
       const status = guest.getGuestStatus().toString();
       const deelnemer = result.find(value => value.email === email);
       if (deelnemer) {
         deelnemer.uitnodigingen.push({
             datum: datum,
-            gebouw: gebouw,
+            dienst: dienst,
             status: status
           });
         }

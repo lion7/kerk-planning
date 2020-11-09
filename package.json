@@ -19,15 +19,15 @@
   },
   "dependencies": {
     "@material/mwc-button": "^0.19.1",
-    "@material/mwc-dialog": "^0.19.1",
     "@material/mwc-fab": "^0.19.1",
     "@material/mwc-icon": "^0.19.1",
     "@material/mwc-icon-button": "^0.19.1",
     "@material/mwc-list": "^0.19.1",
     "@material/mwc-select": "^0.19.1",
     "@material/mwc-top-app-bar-fixed": "^0.19.1",
+    "@vaadin/vaadin-date-picker": "^4.4.1",
+    "@vaadin/vaadin-time-picker": "^2.4.0",
     "@webcomponents/webcomponentsjs": "^2.4.4",
-    "app-datepicker": "^4.3.0",
     "lit-element": "^2.2.1",
     "lit-html": "^1.1.2"
   },

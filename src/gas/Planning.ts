@@ -1,13 +1,13 @@
-import {Planning, Tijdvak} from "../common/Model";
-import {bepaalTijdstippen, isoDatum} from "../common/Util";
+import {Planning} from "../common/Model";
 import CalendarEventUpdated = GoogleAppsScript.Events.CalendarEventUpdated;
+import {isoDatum} from "../common/Util";
 
 function onEventUpdated(event: CalendarEventUpdated) {
   Logger.log(event);
 }
 
-function ophalen(datum: string, tijdvak: Tijdvak): Planning | undefined {
-  const filename = `planning-${isoDatum(new Date(datum))}-${tijdvak}.json`
+function ophalen(datum: string, dienst: string): Planning | undefined {
+  const filename = `planning ${datum} ${dienst}.json`
   const iterator = DriveApp.getFilesByName(filename);
   if (iterator.hasNext()) {
     try {
@@ -22,7 +22,8 @@ function ophalen(datum: string, tijdvak: Tijdvak): Planning | undefined {
 }
 
 function opslaan(planning: Planning) {
-  const filename = `planning-${isoDatum(new Date(planning.datum))}-${planning.tijdvak}.json`
+  const datum = isoDatum(new Date(planning.tijdstippen.startTijd));
+  const filename = `planning ${datum} ${planning.dienst}.json`
   const iterator = DriveApp.getFilesByName(filename);
   if (iterator.hasNext()) {
     const f = iterator.next();
@@ -35,15 +36,16 @@ function opslaan(planning: Planning) {
 function uitnodigen(planning: Planning): number {
   opslaan(planning);
 
-  const dienst = `${planning.tijdvak.toLowerCase()}dienst`;
-  const tijdstippen = bepaalTijdstippen(new Date(planning.datum), planning.tijdvak);
-  const datum = tijdstippen.openingsTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
-  const tijdstip = tijdstippen.openingsTijd.toLocaleString('nl', {hour: 'numeric', minute: 'numeric'});
+  const openingsTijd = new Date(planning.tijdstippen.openingsTijd);
+  const startTijd = new Date(planning.tijdstippen.startTijd);
+  const eindTijd = new Date(planning.tijdstippen.eindTijd);
+  const datum = openingsTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
+  const tijdstip = openingsTijd.toLocaleString('nl', {hour: 'numeric', minute: 'numeric'});
 
   const calendar = CalendarApp.getDefaultCalendar();
   const reedsGenodigden: string[] = [];
   const verdwenenGenodigden: string[] = [];
-  calendar.getEvents(tijdstippen.startTijd, tijdstippen.eindTijd, {'search': 'Uitnodiging'}).forEach(event => event.getGuestList().forEach(guest => {
+  calendar.getEvents(startTijd, eindTijd, {'search': 'Uitnodiging'}).forEach(event => event.getGuestList().forEach(guest => {
     const email = guest.getEmail().toLowerCase();
     const status = guest.getGuestStatus().toString();
     reedsGenodigden.push(email);
@@ -58,8 +60,7 @@ function uitnodigen(planning: Planning): number {
   const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
 
   nieuweGenodigden.forEach(genodigde => {
-    const gebouw = genodigde.gebouw.includes('(') ? genodigde.gebouw.substring(0, genodigde.gebouw.indexOf('(')).trim() : genodigde.gebouw;
-    const title = `Uitnodiging ${dienst} ${gebouw}`;
+    const title = `Uitnodiging ${planning.dienst}`;
     let huisgenotenTekst = '';
     switch (genodigde.aantal) {
       case 1:
@@ -72,11 +73,11 @@ function uitnodigen(planning: Planning): number {
         huisgenotenTekst = `samen met uw ${genodigde.aantal - 1} huisgenoten`;
         break;
     }
-    const event = calendar.createEvent(title, tijdstippen.startTijd, tijdstippen.eindTijd, {
+    const event = calendar.createEvent(title, startTijd, eindTijd, {
       description: `Geachte ${genodigde.naam},
 
 Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen, kunnen wij u hierbij meedelen dat u
-${huisgenotenTekst} bent ingedeeld om op D.V. ${datum} de ${dienst} bij te wonen.
+${huisgenotenTekst} bent ingedeeld om op D.V. ${datum} de ${planning.dienst} bij te wonen.
 U wordt hartelijk uitgenodigd voor deze dienst.
 
 • U wordt verwacht bij de ingang ${genodigde.ingang}.
@@ -104,7 +105,6 @@ Wij zullen dan iemand anders proberen uit te nodigen.
 
 Wij wensen u van harte Gods zegen toe onder de bediening van het Woord,
 Kerkenraden Hervormde Gemeente Genemuiden`,
-      location: gebouw,
       guests: genodigde.email,
       sendInvites: true
     });
@@ -116,7 +116,7 @@ Kerkenraden Hervormde Gemeente Genemuiden`,
     event.setTag('Ingang', genodigde.ingang)
   });
 
-  const filename = `genodigden-${isoDatum(new Date(planning.datum))}-${planning.tijdvak}`;
+  const filename = `genodigden ${isoDatum(startTijd)} ${planning.dienst}.json`
   const iterator = DriveApp.getFilesByName(filename);
   let spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
   if (iterator.hasNext()) {

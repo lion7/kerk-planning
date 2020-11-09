@@ -1,26 +1,16 @@
 import {css, html, LitElement, property, PropertyValues} from 'lit-element';
-import {Beschikbaarheid, Deelnemer, Gebouw, Genodigde, Opgave, Planning, Stoel, Tijdvak} from "../common/Model";
+import {Beschikbaarheid, Deelnemer, Gebouw, Genodigde, Opgave, Planning, Stoel, Tijdstippen} from "../common/Model";
 import '@webcomponents/webcomponentsjs/webcomponents-loader';
 import '@material/mwc-icon';
 import '@material/mwc-button';
-import '@material/mwc-dialog';
 import '@material/mwc-fab';
 import '@material/mwc-list';
 import '@material/mwc-list/mwc-list-item';
 import '@material/mwc-select';
 import '@material/mwc-top-app-bar-fixed';
-import 'app-datepicker';
-import {Dialog} from "@material/mwc-dialog/mwc-dialog";
-import {Datepicker} from "app-datepicker/dist/datepicker";
-import {
-  bepaalIngang, bepaalTijdstippen,
-  isHorizontaal,
-  isoDatum,
-  isOnbeschikbaar,
-  laatsteUitnodiging,
-  toCssRotation,
-  volgendeZondag
-} from "../common/Util";
+import '@vaadin/vaadin-date-picker';
+import '@vaadin/vaadin-time-picker';
+import {bepaalIngang, isDST, isHorizontaal, isoDatum, isOnbeschikbaar, isoTijd, laatsteUitnodiging, toCssRotation, volgendeZondag} from "../common/Util";
 
 export class KerkPlanning extends LitElement {
   static styles = css`
@@ -90,43 +80,113 @@ export class KerkPlanning extends LitElement {
     }
   `;
 
-  @property({type: String}) gebouwenUrl = '';
-  @property({type: String}) deelnemersUrl = '';
-  @property({type: String}) uitnodigenUrl = '';
-  @property({type: []}) gebouwen: Gebouw[] = [];
+  @property({type: []}) diensten: string[] = [];
   @property({type: []}) deelnemers: Deelnemer[] = [];
-  @property({type: Function}) ophalen: (datum: string, tijdvak: Tijdvak, handler: (planning: Planning | undefined) => void) => void = (datum, tijdvak, handler) => {
-    console.log(`Ophalen van ${datum}-${tijdvak}`);
-    handler(undefined);
+  @property({type: []}) gebouwen: Gebouw[] = [];
+  @property({type: Function}) ophalen: (datum: string, dienst: string, handler: (planning: Planning | undefined) => void) => void = (datum, dienst, handler) => {
+    console.log(`Ophalen van ${datum} ${dienst}`);
+    setTimeout(() => handler(undefined), 1000);
   };
   @property({type: Function}) opslaan: (planning: Planning, handler: () => void) => void = (planning, handler) => {
     console.log(planning);
-    handler();
+    setTimeout(() => handler(), 1000);
   };
   @property({type: Function}) uitnodigen: (planning: Planning, handler: (aantalGenodigden: number) => void) => void = (planning, handler) => {
     console.log(planning);
-    handler(0);
+    setTimeout(() => handler(this.genodigden.length), 1000);
   };
 
   @property({type: Boolean}) private loading = false;
-  @property({type: Boolean}) private datumKiezen = false;
-  @property({type: Number}) private gebouwIndex = 0;
   @property({type: String}) private datum = volgendeZondag();
-  @property({type: String}) private tijdvak = Tijdvak.Ochtend;
+  @property({type: String}) private dienst: string | undefined = undefined;
   @property({type: []}) private genodigden: Genodigde[] = [];
 
+  get gebouw(): Gebouw | undefined {
+    const dienst = this.dienst?.toLowerCase();
+    if (dienst) {
+      return this.gebouwen.find(gebouw => {
+        const gebouwNaam = gebouw.naam.includes('(') ? gebouw.naam.substring(0, gebouw.naam.indexOf('(')).trim() : gebouw.naam;
+        return dienst.includes(gebouwNaam.toLowerCase());
+      });
+    }
+    return undefined;
+  }
+
   render() {
-    const tijdstippen = bepaalTijdstippen(this.datum, this.tijdvak);
-    const gebouw = this.gebouwen[this.gebouwIndex]
+    return html`
+      <mwc-top-app-bar-fixed>
+        <!--<div slot="title">KerkPlanning</div>-->
+        <mwc-button raised label="Planning exporteren" icon="archive" slot="actionItems" @click="${this._downloadPlanning}"></mwc-button>
+        <mwc-button raised label="Lijst downloaden" icon="list" slot="actionItems" @click="${this._downloadLijst}"></mwc-button>
+        <mwc-button raised label="Planning opslaan" icon="save_alt" slot="actionItems" @click="${this._opslaanPlanning}"></mwc-button>
+        <mwc-button raised label="Reset planning" icon="restore" slot="actionItems" @click="${this._resetPlanning}"></mwc-button>
+        <mwc-fab extended label="Uitnodigingen versturen" icon="send" slot="actionItems" @click="${this._verstuurUitnodigingen}"></mwc-fab>
+        <div>
+          <div id="view">
+            <mwc-select label="Dienst" slot="actionItems" value="${this.dienst}" @selected="${this._selecteerDienst}">
+              ${this.diensten.map(((value) => html`<mwc-list-item value="${value}">${value}</mwc-list-item>`))}
+            </mwc-select>
+            <div id="controls">
+              <vaadin-date-picker value="${isoDatum(this.datum)}" @value-changed="${this._selecteerDatum}"></vaadin-date-picker>
+              <vaadin-time-picker value="${isoTijd(this.datum)}" step="1800" min="08:00" @value-changed="${this._selecteerTijd}"></vaadin-time-picker>
+            </div>
+            ${this.renderDeelnemers()}
+            ${this.renderGebouw()}
+          </div> <!-- #planning -->
+          <div class="${this.loading ? 'loading' : ''}"></div>
+        </div> <!-- #top-app-bar-content -->
+      </mwc-top-app-bar-fixed>
+    `;
+  }
+
+  renderDeelnemers() {
+    return html`
+      <mwc-list id="deelnemers"
+                ondragenter="return false"
+                ondragover="return false"
+                @drop="${this._reset}">
+          ${this.deelnemers
+      .sort((a, b) => laatsteUitnodiging(a).getTime() - laatsteUitnodiging(b).getTime())
+      .map(deelnemer => {
+        return {deelnemer: deelnemer, opgave: this.findOpgave(deelnemer)};
+      })
+      .filter(value => !!value.opgave)
+      .map(value => {
+        const deelnemer = value.deelnemer;
+        const opgave = value.opgave;
+        const aantal = opgave ? opgave.aantal : '?';
+        const uitnodigingen = deelnemer.uitnodigingen.map(value => html`<li>${new Date(value.datum).toLocaleString('nl', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: 'numeric'
+        })} - ${value.dienst} - ${value.status}</li>`);
+        return html`<mwc-list-item twoline hasMeta graphic="avatar"
+                             data-deelnemer-email="${deelnemer.email}"
+                             style="background-color: ${this.isGenodigde(deelnemer) ? 'red' : 'transparent'}; height: min-content"
+                             draggable="true"
+                             @dragstart="${this._drag})">
+              <span>${deelnemer.naam}</span>
+              <span slot="secondary">${deelnemer.adres}, ${deelnemer.postcode} ${deelnemer.woonplaats}</span>
+              <span slot="secondary"><ul>${uitnodigingen}</ul></span>
+              <mwc-icon slot="meta">filter_${aantal}</mwc-icon>
+              <mwc-icon slot="graphic" class="inverted">${aantal > 1 ? 'people' : 'person'}</mwc-icon>
+            </mwc-list-item>`;
+      })}
+      </mwc-list>
+    `;
+  }
+
+  renderGebouw() {
+    const gebouw = this.gebouw
     if (!gebouw) {
       console.log("Gebouw niet gevonden!");
       return;
     }
 
     const aantalStoelen = gebouw.stoelen.length;
-    const aantalStoelenIngepland = this.genodigden.filter(value => value.gebouw == gebouw.naam)
-      .map(value => value.stoelen.length)
-      .reduce((previousValue, currentValue) => previousValue + currentValue, 0);
+    const aantalStoelenIngepland = this.genodigden.map(value => value.stoelen.length).reduce((previousValue, currentValue) => previousValue + currentValue, 0);
     const beschikbareStoelen = gebouw.stoelen.filter(stoel => this.isBeschikbaar(gebouw, stoel));
     const aantalStoelenBeschikbaar = beschikbareStoelen.length;
 
@@ -137,67 +197,12 @@ export class KerkPlanning extends LitElement {
     const cellSize = css`min(80vh / ${rijen}, (100vw - 570px) / ${kolommen})`;
 
     return html`
-      <mwc-top-app-bar-fixed>
-        <!--<div slot="title">KerkPlanning</div>-->
-        <mwc-button raised label="Planning exporteren" icon="archive" slot="actionItems" @click="${this._downloadPlanning}"></mwc-button>
-        <mwc-button raised label="Lijst downloaden" icon="list" slot="actionItems" @click="${this._downloadLijst}"></mwc-button>
-        <mwc-button raised label="Planning opslaan" icon="save_alt" slot="actionItems" @click="${this._opslaanPlanning}"></mwc-button>
-        <mwc-button raised label="Reset planning" icon="restore" slot="actionItems" @click="${this._resetPlanning}"></mwc-button>
-        <mwc-fab extended label="Uitnodigingen versturen" icon="send" slot="actionItems" @click="${this._verstuurUitnodigingen}"></mwc-fab>
-        <div>
-          <mwc-dialog id="datumKiezer">
-            <app-datepicker value="${isoDatum(this.datum)}"></app-datepicker>
-            <mwc-button slot="secondaryAction" dialogAction="cancel">Annuleren</mwc-button>
-            <mwc-button slot="primaryAction" dialogAction="set" @click="${this._selecteerDatum}">OK</mwc-button>
-          </mwc-dialog>
-          <div id="controls">
-            <mwc-select label="Gebouw" slot="actionItems" value="${this.gebouwIndex}" @selected="${this._selecteerGebouw}">
-              ${this.gebouwen.map(((value, index) => html`<mwc-list-item value="${index}">${value.naam}</mwc-list-item>`))}
-            </mwc-select>
-            <mwc-select label="Tijdvak" slot="actionItems" value="${this.tijdvak}" @selected="${this._selecteerTijdvak}">
-              ${Object.keys(Tijdvak).map(value => html`<mwc-list-item value="${value}">${value}</mwc-list-item>`)}
-            </mwc-select>
-            <mwc-button label="Datum: ${isoDatum(this.datum)}" icon="calendar" @click="${this._openDatumKiezer}">
-            </mwc-button>
-            <div>Aantal plekken:<br/>${aantalStoelen}</div>
-            <div>Plekken beschikbaar:<br/>${aantalStoelenBeschikbaar}</div>
-            <div>Plekken ingepland:<br/>${aantalStoelenIngepland}</div>
-          </div>
-          <div id="view">
-            <mwc-list id="deelnemers"
-                      ondragenter="return false"
-                      ondragover="return false"
-                      @drop="${this._reset}">
-                ${this.deelnemers.filter(deelnemer => this.kanIngeplandWorden(deelnemer))
-      .sort((a, b) => laatsteUitnodiging(a).getTime() - laatsteUitnodiging(b).getTime())
-      .map(deelnemer => {
-        const opgave = this.findOpgave(deelnemer);
-        const aantal = opgave ? opgave.aantal : '?';
-        const uitnodigingen = deelnemer.uitnodigingen.map(value => html`<li>${new Date(value.datum).toLocaleString('nl', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-          hour: 'numeric',
-          minute: 'numeric'
-        })} - ${value.gebouw} - ${value.status}</li>`);
-        return html`<mwc-list-item twoline hasMeta graphic="avatar"
-                                   data-deelnemer-email="${deelnemer.email}"
-                                   style="background-color: ${this.isGenodigde(deelnemer) ? 'red' : 'transparent'}; height: min-content"
-                                   draggable="true"
-                                   @dragstart="${this._drag})">
-                    <span>${deelnemer.naam}</span>
-                    <span slot="secondary">${deelnemer.adres}, ${deelnemer.postcode} ${deelnemer.woonplaats}</span>
-                    <span slot="secondary"><ul>${uitnodigingen}</ul></span>
-                    <mwc-icon slot="meta">filter_${aantal}</mwc-icon>
-                    <mwc-icon slot="graphic" class="inverted">${aantal > 1 ? 'people' : 'person'}</mwc-icon>
-                  </mwc-list-item>`;
-      })}
-            </mwc-list> <!-- #deelnemers -->
-            <div id="gebouw" style="display: grid; grid-template-rows: repeat(${rijen}, ${cellSize}); grid-template-columns: repeat(${kolommen}, ${cellSize});">
+      <div>
+        <div id="gebouw" style="display: grid; grid-template-rows: repeat(${rijen}, ${cellSize}); grid-template-columns: repeat(${kolommen}, ${cellSize});">
 
-            ${gebouw.props.map(prop => html`<div style="grid-row: ${prop.rij}; grid-column: ${prop.kolom}; background-color: ${prop.kleur}"></div>`)}
+        ${gebouw.props.map(prop => html`<div style="grid-row: ${prop.rij}; grid-column: ${prop.kolom}; background-color: ${prop.kleur}"></div>`)}
 
-              ${gebouw.stoelen.map((stoel, index) => {
+          ${gebouw.stoelen.map((stoel, index) => {
       const genodigde = this.findGenodigde(stoel);
       const rotation = toCssRotation(stoel.richting);
       let styling = '';
@@ -205,7 +210,7 @@ export class KerkPlanning extends LitElement {
       let title = 'Leeg';
       if (genodigde) {
         title = genodigde.naam;
-        const status = this.findDeelnemer(genodigde.email)?.uitnodigingen?.find(value => value.datum == tijdstippen.startTijd.toISOString() && value.gebouw == gebouw.naam)?.status;
+        const status = this.findDeelnemer(genodigde.email)?.uitnodigingen?.find(value => value.datum == isoDatum(this.datum) && value.dienst == this.dienst)?.status;
         if (status === 'YES') {
           styling = 'background-color: red';
         } else if (status === 'NO') {
@@ -222,61 +227,54 @@ export class KerkPlanning extends LitElement {
         beschikbaar = true;
       }
       return html`<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/Font_Awesome_5_solid_chair.svg"
-                       class="stoel"
-                       draggable="${!!genodigde}"
-                       data-stoel-index="${index}"
-                       data-deelnemer-email="${genodigde ? genodigde.email : ''}"
-                       title="${title}"
-                       style="grid-row: ${stoel.rij}; grid-column: ${stoel.kolom}; transform: rotate(${rotation}); ${styling}"
-                       ondragenter="return ${!beschikbaar}"
-                       ondragover="return ${!beschikbaar}"
-                       @dragstart="${this._drag}"
-                       @drop="${this._drop}" />`;
+                   class="stoel"
+                   draggable="${!!genodigde}"
+                   data-stoel-index="${index}"
+                   data-deelnemer-email="${genodigde ? genodigde.email : ''}"
+                   title="${title}"
+                   style="grid-row: ${stoel.rij}; grid-column: ${stoel.kolom}; transform: rotate(${rotation}); ${styling}"
+                   ondragenter="return ${!beschikbaar}"
+                   ondragover="return ${!beschikbaar}"
+                   @dragstart="${this._drag}"
+                   @drop="${this._drop}" />`;
     })}
-            </div> <!-- #gebouw -->
-          </div> <!-- #planning -->
-          <div class="${this.loading ? 'loading' : ''}"></div>
-        </div> <!-- #top-app-bar-content -->
-      </mwc-top-app-bar-fixed>
-    `;
+        </div>
+        <div id="controls">
+          <div>Aantal plekken:<br/>${aantalStoelen}</div>
+          <div>Plekken beschikbaar:<br/>${aantalStoelenBeschikbaar}</div>
+          <div>Plekken ingepland:<br/>${aantalStoelenIngepland}</div>
+        </div>
+      </div>
+      `;
   }
 
   protected update(changedProperties: PropertyValues) {
     super.update(changedProperties)
 
-    if (changedProperties.has('gebouwenUrl') && this.gebouwenUrl && this.gebouwenUrl != '') {
-      console.log(`Gebouwen ophalen van ${this.gebouwenUrl}`);
-      fetch(this.gebouwenUrl, {mode: "no-cors"}).then(value => value.json()).then(value => {
-        this.gebouwIndex = 0;
-        this.gebouwen = value;
-      });
+    if (changedProperties.has('deelnemers') && this.diensten.length == 0) {
+      const diensten: string[] = [];
+      this.deelnemers.forEach(deelnemer => deelnemer.opgaven.forEach(opgave => {
+        if (!diensten.includes(opgave.dienst)) diensten.push(opgave.dienst);
+      }))
+      this.diensten = diensten;
     }
-    if (changedProperties.has('deelnemersUrl') && this.deelnemersUrl && this.deelnemersUrl != '') {
-      console.log(`Deelnemers ophalen van ${this.deelnemersUrl}`);
-      fetch(this.deelnemersUrl, {mode: "no-cors"}).then(value => value.json()).then(value => this.deelnemers = value);
+
+    if (changedProperties.has('dienst')) {
+      const startTijd = this.bepaalStarttijd();
+      this.datum.setTime(startTijd.getTime()); // set time directly so it won't trigger an update loop
     }
-    if (changedProperties.has('uitnodigenUrl') && this.uitnodigenUrl && this.uitnodigenUrl != '') {
-      this.uitnodigen = genodigden => {
-        fetch(this.uitnodigenUrl, {
-          method: 'POST',
-          body: JSON.stringify(genodigden)
-        }).then(value => console.log(`Uitnodigingen verstuurd: ${value}`))
+
+    if (changedProperties.has('datum') || changedProperties.has('dienst')) {
+      const dienst = this.dienst;
+      if (!this.loading && dienst) {
+        this._setLoading(true);
+        this.ophalen(isoDatum(this.datum), dienst, planning => {
+          this._setLoading(false);
+          this.genodigden = planning ? planning.genodigden : [];
+          console.log(`Planning opgehaald met ${this.genodigden.length} genodigden`);
+        });
       }
     }
-
-    if (changedProperties.has('datum') || changedProperties.has('tijdvak')) {
-      this.loading = true;
-      this.ophalen(isoDatum(this.datum), this.tijdvak, planning => {
-        this.loading = false;
-        this.genodigden = planning ? planning.genodigden : [];
-        console.log(`Planning opgehaald met ${this.genodigden.length} genodigden`);
-      });
-    }
-  }
-
-  _openDatumKiezer(event: Event) {
-    const el = this.shadowRoot?.querySelector('#datumKiezer') as Dialog;
-    el.show();
   }
 
   _drag(event: DragEvent) {
@@ -314,7 +312,7 @@ export class KerkPlanning extends LitElement {
       return;
     }
 
-    const gebouw = this.gebouwen[this.gebouwIndex]
+    const gebouw = this.gebouw
     if (!gebouw) {
       console.log("Gebouw niet gevonden!");
       return;
@@ -352,7 +350,6 @@ export class KerkPlanning extends LitElement {
         naam: deelnemer.naam,
         aantal: aantalStoelenNodig,
         email: deelnemer.email,
-        gebouw: gebouw.naam,
         ingang: bepaalIngang(gebouw, gevondenStoelen[0]),
         stoelen: gevondenStoelen
       };
@@ -361,9 +358,10 @@ export class KerkPlanning extends LitElement {
   }
 
   _planning(): Planning {
+    const dienst = this.dienst;
     return {
-      datum: isoDatum(this.datum),
-      tijdvak: this.tijdvak,
+      tijdstippen: this.bepaalTijdstippen(),
+      dienst: dienst ? dienst : '',
       genodigden: this.genodigden
     };
   }
@@ -388,51 +386,65 @@ export class KerkPlanning extends LitElement {
     const planning = this._planning();
     const link = document.createElement("a");
     link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURI(JSON.stringify(planning)));
-    link.setAttribute('download', `planning-${isoDatum(this.datum)}-${this.tijdvak.toLowerCase()}.json`);
+    link.setAttribute('download', `planning ${isoDatum(this.datum)} ${this.dienst}.json`);
     link.click(); // This will download the JSON file
   }
 
   _downloadLijst(event: Event) {
     event.preventDefault();
     const rows = this.genodigden.sort((a, b) => a.ingang.localeCompare(b.ingang))
-      .map(value => [value.gebouw, value.ingang, value.naam, value.aantal, value.email]);
+      .map(value => [value.ingang, value.naam, value.aantal, value.email]);
     const csvContent = "gebouw;ingang;naam;aantal personen;email\n" + rows.map(e => e.join(";")).join("\n");
     const link = document.createElement("a");
     link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURI(csvContent));
-    link.setAttribute('download', `genodigden-${isoDatum(this.datum)}-${this.tijdvak.toLowerCase()}.csv`);
+    link.setAttribute('download', `genodigden ${isoDatum(this.datum)} ${this.dienst}.csv`);
     link.click(); // This will download the CSV file
   }
 
   _opslaanPlanning(event: Event) {
     event.preventDefault();
     const planning = this._planning();
-    this.loading = true;
-    this.opslaan(planning, () => this.loading = false);
+    this._setLoading(true);
+    this.opslaan(planning, () => this._setLoading(false));
   }
 
   _verstuurUitnodigingen(event: Event) {
     event.preventDefault();
     const planning = this._planning();
-    this.loading = true;
+    this._setLoading(true);
     this.uitnodigen(planning, aantalGenodigden => {
-      this.loading = false;
+      this._setLoading(false);
       alert(`Er zijn ${aantalGenodigden} uitnodigingen verstuurd!`);
     });
   }
 
-  _selecteerGebouw(event: Event) {
+  _selecteerDienst(event: Event) {
     const el = event.target as HTMLInputElement;
-    this.gebouwIndex = parseInt(el.value);
+    console.log(el.value);
+    this.dienst = el.value;
   }
 
-  _selecteerTijdvak(event: Event) {
-    const el = event.target as HTMLInputElement;
-    this.tijdvak = el.value as Tijdvak;
+  _selecteerDatum(event: CustomEvent) {
+    const nieuweDatum = event.detail.value;
+    const nieuweDatumTijd = new Date(this.datum);
+    nieuweDatumTijd.setDate(new Date(nieuweDatum).getDate());
+    if (this.datum.toISOString() !== nieuweDatumTijd.toISOString()) {
+      this.datum = nieuweDatumTijd;
+    }
   }
 
-  _selecteerDatum(event: Event) {
-    const el = this.shadowRoot?.querySelector('#datumKiezer')?.firstElementChild as Datepicker;
-    this.datum = new Date(el.value);
+  _selecteerTijd(event: CustomEvent) {
+    const nieuweTijd = event.detail.value as string;
+    const nieuweDatumTijd = new Date(this.datum);
+    const parts = nieuweTijd.split(':', 2).map(value => parseInt(value));
+    nieuweDatumTijd.setHours(parts[0], parts[1], 0, 0);
+    if (this.datum.toISOString() !== nieuweDatumTijd.toISOString()) {
+      this.datum = nieuweDatumTijd;
+    }
+  }
+
+  _setLoading(loading: boolean) {
+    this.loading = loading;
   }
 
   private findDeelnemer(email: string): Deelnemer | undefined {
@@ -440,23 +452,11 @@ export class KerkPlanning extends LitElement {
   }
 
   private findGenodigde(stoel: Stoel): Genodigde | undefined {
-    const gebouw = this.gebouwen[this.gebouwIndex]
-    if (!gebouw) {
-      console.log("Gebouw niet gevonden!");
-      return undefined;
-    }
-    return this.genodigden.find(value => value.gebouw == gebouw.naam && value.stoelen.some(s => s.rij == stoel.rij && s.kolom == stoel.kolom));
+    return this.genodigden.find(value => value.stoelen.some(s => s.rij == stoel.rij && s.kolom == stoel.kolom));
   }
 
   private findOpgave(deelnemer: Deelnemer): Opgave | undefined {
-    const gebouw = this.gebouwen[this.gebouwIndex]
-    if (!gebouw) {
-      console.log("Gebouw niet gevonden!");
-      return undefined;
-    }
-    const g = gebouw.naam.includes('(') ? gebouw.naam.substring(0, gebouw.naam.indexOf('(')).toLowerCase().trim() : gebouw.naam.toLowerCase();
-    const t = this.tijdvak.toLowerCase();
-    return deelnemer.opgaven.find(value => value.aantal > 0 && value.dienst.toLowerCase().includes(g) && value.dienst.toLowerCase().includes(t));
+    return deelnemer.opgaven.find(value => value.aantal > 0 && value.dienst == this.dienst);
   }
 
   private isGenodigde(deelnemer: Deelnemer): boolean {
@@ -471,11 +471,35 @@ export class KerkPlanning extends LitElement {
     if (gereserveerdeStoelen.some(stoelen => isOnbeschikbaar(stoel, stoelen))) {
       return false;
     }
-    const ingeplandeStoelen = this.genodigden.filter(value => value.gebouw == gebouw.naam).map(value => value.stoelen);
+    const ingeplandeStoelen = this.genodigden.map(value => value.stoelen);
     return !ingeplandeStoelen.some(stoelen => isOnbeschikbaar(stoel, stoelen));
   }
 
-  private kanIngeplandWorden(deelnemer: Deelnemer): boolean {
-    return !!this.findOpgave(deelnemer);
+  private bepaalStarttijd(): Date {
+    const dienst = this.dienst ? this.dienst.toLowerCase() : '';
+    const datum = this.datum;
+    const startTijd = new Date(datum);
+    if (dienst.includes("ochtend")) {
+      startTijd.setHours(9, 30, 0, 0);
+    } else if ((dienst.includes("middag") && !dienst.includes("avond")) || (dienst.includes("middag") && dienst.includes("avond") && !isDST(datum))) {
+      startTijd.setHours(15, 30, 0, 0);
+    } else if ((!dienst.includes("middag") && dienst.includes("avond")) || (dienst.includes("middag") && dienst.includes("avond") && isDST(datum))) {
+      startTijd.setHours(19, 0, 0, 0);
+    }
+    return startTijd;
+  }
+
+  private bepaalTijdstippen(): Tijdstippen {
+    const datum = this.datum;
+    const startTijd = new Date(datum);
+    const openingsTijd = new Date(datum);
+    const eindTijd = new Date(datum);
+    openingsTijd.setTime(startTijd.getTime() - 20 * 60 * 1000);
+    eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
+    return {
+      openingsTijd: openingsTijd.toISOString(),
+      startTijd: startTijd.toISOString(),
+      eindTijd: eindTijd.toISOString()
+    }
   }
 }
