@@ -1,13 +1,9 @@
 import {Planning, Tijdvak} from "../common/Model";
+import {bepaalTijdstippen, isoDatum} from "../common/Util";
 import CalendarEventUpdated = GoogleAppsScript.Events.CalendarEventUpdated;
 
 function onEventUpdated(event: CalendarEventUpdated) {
   Logger.log(event);
-}
-
-function isoDatum(date: Date): string {
-  const datum = date.toISOString();
-  return datum.substring(0, datum.indexOf('T'));
 }
 
 function ophalen(datum: string, tijdvak: Tijdvak): Planning | undefined {
@@ -39,35 +35,15 @@ function opslaan(planning: Planning) {
 function uitnodigen(planning: Planning): number {
   opslaan(planning);
 
-  const openingsTijd = new Date(planning.datum);
-  const startTijd = new Date(planning.datum);
-  const eindTijd = new Date(planning.datum);
-  switch (planning.tijdvak) {
-    case Tijdvak.Ochtend:
-      openingsTijd.setHours(9, 10, 0, 0);
-      startTijd.setHours(9, 30, 0, 0);
-      eindTijd.setHours(11, 0, 0, 0);
-      break;
-    case Tijdvak.Middag:
-      openingsTijd.setHours(15, 10, 0, 0);
-      startTijd.setHours(15, 30, 0, 0);
-      eindTijd.setHours(17, 0, 0, 0);
-      break;
-    case Tijdvak.Avond:
-      openingsTijd.setHours(18, 40, 0, 0);
-      startTijd.setHours(19, 0, 0, 0);
-      eindTijd.setHours(20, 30, 0, 0);
-      break;
-  }
-
   const dienst = `${planning.tijdvak.toLowerCase()}dienst`;
-  const datum = openingsTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
-  const tijdstip = openingsTijd.toLocaleString('nl', {hour: 'numeric', minute: 'numeric'});
+  const tijdstippen = bepaalTijdstippen(new Date(planning.datum), planning.tijdvak);
+  const datum = tijdstippen.openingsTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
+  const tijdstip = tijdstippen.openingsTijd.toLocaleString('nl', {hour: 'numeric', minute: 'numeric'});
 
   const calendar = CalendarApp.getDefaultCalendar();
   const reedsGenodigden: string[] = [];
   const verdwenenGenodigden: string[] = [];
-  calendar.getEvents(startTijd, eindTijd, {'search': 'Uitnodiging'}).forEach(event => event.getGuestList().forEach(guest => {
+  calendar.getEvents(tijdstippen.startTijd, tijdstippen.eindTijd, {'search': 'Uitnodiging'}).forEach(event => event.getGuestList().forEach(guest => {
     const email = guest.getEmail().toLowerCase();
     const status = guest.getGuestStatus().toString();
     reedsGenodigden.push(email);
@@ -96,7 +72,7 @@ function uitnodigen(planning: Planning): number {
         huisgenotenTekst = `samen met uw ${genodigde.aantal - 1} huisgenoten`;
         break;
     }
-    const event = calendar.createEvent(title, startTijd, eindTijd, {
+    const event = calendar.createEvent(title, tijdstippen.startTijd, tijdstippen.eindTijd, {
       description: `Geachte ${genodigde.naam},
 
 Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen, kunnen wij u hierbij meedelen dat u

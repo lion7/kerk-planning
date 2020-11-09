@@ -1,28 +1,14 @@
 import {Beschikbaarheid, Gebouw, Ingang, Prop, Richting, Stoel} from "../common/Model";
+import {bepaalRichting} from "../common/Util";
 
 interface GebouwIngang extends Ingang {
   gebouw: string;
 }
 
-function convertRichting(c: any): Richting | undefined {
-  switch (c) {
-    case 'N':
-      return Richting.Noord;
-    case 'O':
-      return Richting.Oost;
-    case 'Z':
-      return Richting.Zuid;
-    case 'W':
-      return Richting.West;
-    default:
-      return undefined;
-  }
-}
-
 function createIngang(row: any[]): GebouwIngang {
   const gebouw = row[0];
   const naam = row[1];
-  const richting = convertRichting(row[2]);
+  const richting = bepaalRichting(row[2]);
   const vanRij = typeof row[3] == "number" ? row[3] : undefined;
   const totRij = typeof row[4] == "number" ? row[4] : undefined;
   const vanKolom = typeof row[5] == "number" ? row[5] : undefined;
@@ -74,7 +60,7 @@ function createGebouw(sheet: GoogleAppsScript.Spreadsheet.Sheet, ingangen: Gebou
       const v = indeling[rij][kolom];
       const bg = backgrounds[rij][kolom];
       if (v && v.charAt(0) === 'S') {
-        const richting = convertRichting(v.charAt(1));
+        const richting = bepaalRichting(v.charAt(1));
         const beschikbaarheid = convertBeschikbaarheid(bg);
         stoelen.push({
           rij: rij + 1,
@@ -91,13 +77,12 @@ function createGebouw(sheet: GoogleAppsScript.Spreadsheet.Sheet, ingangen: Gebou
       }
     }
   }
-  const result: Gebouw = {
+  return {
     naam: naam,
     ingangen: ingangen.filter(v => v.gebouw == naam),
     stoelen: stoelen,
     props: props
   };
-  return result;
 }
 
 function getGebouwen(): Gebouw[] {

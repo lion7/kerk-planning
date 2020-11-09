@@ -82,3 +82,9 @@ export interface Gebouw {
   stoelen: Stoel[];
   props: Prop[];
 }
+
+export interface Tijdstippen {
+  openingsTijd: Date;
+  startTijd: Date;
+  eindTijd: Date;
+}

@@ -1,15 +1,5 @@
 import {css, html, LitElement, property, PropertyValues} from 'lit-element';
-import {
-  Beschikbaarheid,
-  Deelnemer,
-  Gebouw,
-  Genodigde,
-  Opgave,
-  Planning,
-  Richting,
-  Stoel,
-  Tijdvak
-} from "../common/Model";
+import {Beschikbaarheid, Deelnemer, Gebouw, Genodigde, Opgave, Planning, Stoel, Tijdvak} from "../common/Model";
 import '@webcomponents/webcomponentsjs/webcomponents-loader';
 import '@material/mwc-icon';
 import '@material/mwc-button';
@@ -22,6 +12,15 @@ import '@material/mwc-top-app-bar-fixed';
 import 'app-datepicker';
 import {Dialog} from "@material/mwc-dialog/mwc-dialog";
 import {Datepicker} from "app-datepicker/dist/datepicker";
+import {
+  bepaalIngang, bepaalTijdstippen,
+  isHorizontaal,
+  isoDatum,
+  isOnbeschikbaar,
+  laatsteUitnodiging,
+  toCssRotation,
+  volgendeZondag
+} from "../common/Util";
 
 export class KerkPlanning extends LitElement {
   static styles = css`
@@ -112,11 +111,12 @@ export class KerkPlanning extends LitElement {
   @property({type: Boolean}) private loading = false;
   @property({type: Boolean}) private datumKiezen = false;
   @property({type: Number}) private gebouwIndex = 0;
-  @property({type: String}) private datum = KerkPlanning.volgendeZondag();
+  @property({type: String}) private datum = volgendeZondag();
   @property({type: String}) private tijdvak = Tijdvak.Ochtend;
   @property({type: []}) private genodigden: Genodigde[] = [];
 
   render() {
+    const tijdstippen = bepaalTijdstippen(this.datum, this.tijdvak);
     const gebouw = this.gebouwen[this.gebouwIndex]
     if (!gebouw) {
       console.log("Gebouw niet gevonden!");
@@ -146,7 +146,7 @@ export class KerkPlanning extends LitElement {
         <mwc-fab extended label="Uitnodigingen versturen" icon="send" slot="actionItems" @click="${this._verstuurUitnodigingen}"></mwc-fab>
         <div>
           <mwc-dialog id="datumKiezer">
-            <app-datepicker value="${KerkPlanning.isoDatum(this.datum)}"></app-datepicker>
+            <app-datepicker value="${isoDatum(this.datum)}"></app-datepicker>
             <mwc-button slot="secondaryAction" dialogAction="cancel">Annuleren</mwc-button>
             <mwc-button slot="primaryAction" dialogAction="set" @click="${this._selecteerDatum}">OK</mwc-button>
           </mwc-dialog>
@@ -157,7 +157,7 @@ export class KerkPlanning extends LitElement {
             <mwc-select label="Tijdvak" slot="actionItems" value="${this.tijdvak}" @selected="${this._selecteerTijdvak}">
               ${Object.keys(Tijdvak).map(value => html`<mwc-list-item value="${value}">${value}</mwc-list-item>`)}
             </mwc-select>
-            <mwc-button label="Datum: ${KerkPlanning.isoDatum(this.datum)}" icon="calendar" @click="${this._openDatumKiezer}">
+            <mwc-button label="Datum: ${isoDatum(this.datum)}" icon="calendar" @click="${this._openDatumKiezer}">
             </mwc-button>
             <div>Aantal plekken:<br/>${aantalStoelen}</div>
             <div>Plekken beschikbaar:<br/>${aantalStoelenBeschikbaar}</div>
@@ -169,7 +169,7 @@ export class KerkPlanning extends LitElement {
                       ondragover="return false"
                       @drop="${this._reset}">
                 ${this.deelnemers.filter(deelnemer => this.kanIngeplandWorden(deelnemer))
-      .sort((a, b) => KerkPlanning.laatsteUitnodiging(a).getTime() - KerkPlanning.laatsteUitnodiging(b).getTime())
+      .sort((a, b) => laatsteUitnodiging(a).getTime() - laatsteUitnodiging(b).getTime())
       .map(deelnemer => {
         const opgave = this.findOpgave(deelnemer);
         const aantal = opgave ? opgave.aantal : '?';
@@ -199,13 +199,20 @@ export class KerkPlanning extends LitElement {
 
               ${gebouw.stoelen.map((stoel, index) => {
       const genodigde = this.findGenodigde(stoel);
-      const rotation = KerkPlanning.rotation(stoel.richting);
+      const rotation = toCssRotation(stoel.richting);
       let styling = '';
       let beschikbaar = false;
       let title = 'Leeg';
       if (genodigde) {
-        styling = 'background-color: red';
         title = genodigde.naam;
+        const status = this.findDeelnemer(genodigde.email)?.uitnodigingen?.find(value => value.datum == tijdstippen.startTijd.toISOString() && value.gebouw == gebouw.naam)?.status;
+        if (status === 'YES') {
+          styling = 'background-color: red';
+        } else if (status === 'NO') {
+          styling = 'background-color: yellow';
+        } else {
+          styling = 'background-color: orange';
+        }
       } else if (stoel.beschikbaarheid == Beschikbaarheid.Gereserveerd) {
         styling = 'background-color: cyan';
         title = 'Gereserveerd';
@@ -259,7 +266,7 @@ export class KerkPlanning extends LitElement {
 
     if (changedProperties.has('datum') || changedProperties.has('tijdvak')) {
       this.loading = true;
-      this.ophalen(KerkPlanning.isoDatum(this.datum), this.tijdvak, planning => {
+      this.ophalen(isoDatum(this.datum), this.tijdvak, planning => {
         this.loading = false;
         this.genodigden = planning ? planning.genodigden : [];
         console.log(`Planning opgehaald met ${this.genodigden.length} genodigden`);
@@ -334,9 +341,9 @@ export class KerkPlanning extends LitElement {
 
     const aantalStoelenNodig = opgave.aantal;
     const vanRij = stoel.rij;
-    const totRij = KerkPlanning.isHorizontaal(stoel.richting) ? vanRij + 1 : vanRij + aantalStoelenNodig;
+    const totRij = isHorizontaal(stoel.richting) ? vanRij + 1 : vanRij + aantalStoelenNodig;
     const vanKolom = stoel.kolom;
-    const totKolom = KerkPlanning.isHorizontaal(stoel.richting) ? vanKolom + aantalStoelenNodig : vanKolom + 1;
+    const totKolom = isHorizontaal(stoel.richting) ? vanKolom + aantalStoelenNodig : vanKolom + 1;
     console.log(`Proberen om ${deelnemer.naam} in te delen op ${aantalStoelenNodig} stoelen van rij ${vanRij}-${totRij} en van kolom ${vanKolom}-${totKolom}`);
     const gevondenStoelen = gebouw.stoelen.filter(stoel => stoel.rij >= vanRij && stoel.rij < totRij && stoel.kolom >= vanKolom && stoel.kolom < totKolom);
     console.log(`${gevondenStoelen.length} stoelen gevonden voor ${deelnemer.naam}`);
@@ -346,7 +353,7 @@ export class KerkPlanning extends LitElement {
         aantal: aantalStoelenNodig,
         email: deelnemer.email,
         gebouw: gebouw.naam,
-        ingang: KerkPlanning.ingang(gebouw, gevondenStoelen[0]),
+        ingang: bepaalIngang(gebouw, gevondenStoelen[0]),
         stoelen: gevondenStoelen
       };
       this.genodigden = [...this.genodigden.filter(value => value.email != deelnemerEmail), genodigde];
@@ -355,7 +362,7 @@ export class KerkPlanning extends LitElement {
 
   _planning(): Planning {
     return {
-      datum: KerkPlanning.isoDatum(this.datum),
+      datum: isoDatum(this.datum),
       tijdvak: this.tijdvak,
       genodigden: this.genodigden
     };
@@ -381,7 +388,7 @@ export class KerkPlanning extends LitElement {
     const planning = this._planning();
     const link = document.createElement("a");
     link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURI(JSON.stringify(planning)));
-    link.setAttribute('download', `planning-${KerkPlanning.isoDatum(this.datum)}-${this.tijdvak.toLowerCase()}.json`);
+    link.setAttribute('download', `planning-${isoDatum(this.datum)}-${this.tijdvak.toLowerCase()}.json`);
     link.click(); // This will download the JSON file
   }
 
@@ -392,7 +399,7 @@ export class KerkPlanning extends LitElement {
     const csvContent = "gebouw;ingang;naam;aantal personen;email\n" + rows.map(e => e.join(";")).join("\n");
     const link = document.createElement("a");
     link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURI(csvContent));
-    link.setAttribute('download', `genodigden-${KerkPlanning.isoDatum(this.datum)}-${this.tijdvak.toLowerCase()}.csv`);
+    link.setAttribute('download', `genodigden-${isoDatum(this.datum)}-${this.tijdvak.toLowerCase()}.csv`);
     link.click(); // This will download the CSV file
   }
 
@@ -461,100 +468,14 @@ export class KerkPlanning extends LitElement {
       return false;
     }
     const gereserveerdeStoelen = gebouw.stoelen.filter(value => value.beschikbaarheid == Beschikbaarheid.Gereserveerd).map(value => [value]);
-    if (gereserveerdeStoelen.some(stoelen => KerkPlanning.isOnbeschikbaar(stoel, stoelen))) {
+    if (gereserveerdeStoelen.some(stoelen => isOnbeschikbaar(stoel, stoelen))) {
       return false;
     }
     const ingeplandeStoelen = this.genodigden.filter(value => value.gebouw == gebouw.naam).map(value => value.stoelen);
-    return !ingeplandeStoelen.some(stoelen => KerkPlanning.isOnbeschikbaar(stoel, stoelen));
+    return !ingeplandeStoelen.some(stoelen => isOnbeschikbaar(stoel, stoelen));
   }
 
   private kanIngeplandWorden(deelnemer: Deelnemer): boolean {
     return !!this.findOpgave(deelnemer);
-  }
-
-  private static isOnbeschikbaar(stoel: Stoel, stoelen: Stoel[]): boolean {
-    const richting = stoelen[0].richting;
-    let totRij = stoelen.map(value => value.rij).reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
-    let vanRij = stoelen.map(value => value.rij).reduce((previousValue, currentValue) => previousValue > currentValue ? currentValue : previousValue, totRij);
-    let totKolom = stoelen.map(value => value.kolom).reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
-    let vanKolom = stoelen.map(value => value.kolom).reduce((previousValue, currentValue) => previousValue > currentValue ? currentValue : previousValue, totKolom);
-    if (KerkPlanning.isHorizontaal(richting)) {
-      vanRij -= 2;
-      totRij += 2;
-      totKolom += 3;
-      vanKolom -= 3;
-    } else {
-      vanRij -= 3;
-      totRij += 3;
-      totKolom += 2;
-      vanKolom -= 2;
-    }
-    return (stoel.rij >= vanRij && stoel.rij <= totRij) && (stoel.kolom >= vanKolom && stoel.kolom <= totKolom)
-  }
-
-  private static isHorizontaal(richting: Richting) {
-    return richting === Richting.Noord || richting === Richting.Zuid;
-  }
-
-  private static rotation(richting: Richting): string {
-    switch (richting) {
-      case Richting.Noord:
-        return '180deg';
-      case Richting.Oost:
-        return '270deg';
-      case Richting.Zuid:
-        return '0';
-      case Richting.West:
-        return '90deg';
-      default:
-        return '0';
-    }
-  }
-
-  private static ingang(gebouw: Gebouw, stoel: Stoel): string {
-    const ingang = gebouw.ingangen.find(ingang => {
-      let matches = true;
-      let predicates = 0;
-      if (ingang.richting !== undefined) {
-        matches = matches && stoel.richting == ingang.richting;
-        predicates++;
-      }
-      if (ingang.vanRij !== undefined) {
-        matches = matches && stoel.rij >= ingang.vanRij;
-        predicates++;
-      }
-      if (ingang.totRij !== undefined) {
-        matches = matches && stoel.rij < ingang.totRij;
-        predicates++;
-      }
-      if (ingang.vanKolom !== undefined) {
-        matches = matches && stoel.kolom >= ingang.vanKolom;
-        predicates++;
-      }
-      if (ingang.totKolom !== undefined) {
-        matches = matches && stoel.kolom < ingang.totKolom;
-        predicates++;
-      }
-      return predicates > 0 && matches;
-    });
-    return ingang ? ingang.naam : 'onbekend';
-  }
-
-  private static volgendeZondag(): Date {
-    const date = new Date();
-    const daysUntilNextSunday = 7 - date.getDay();
-    date.setDate(date.getDate() + daysUntilNextSunday);
-    date.setHours(9, 30, 0, 0);
-    return date;
-  }
-
-  private static isoDatum(date: Date): string {
-    const datum = date.toISOString();
-    return datum.substring(0, datum.indexOf('T'));
-  }
-
-  private static laatsteUitnodiging(deelnemer: Deelnemer): Date {
-    return deelnemer.uitnodigingen.map(value => new Date(value.datum))
-      .reduce((previousValue, currentValue) => previousValue > currentValue ? previousValue : currentValue, new Date(0));
   }
 }
