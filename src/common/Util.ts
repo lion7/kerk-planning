@@ -60,11 +60,6 @@ export function volgendeZondag(): Date {
   return date;
 }
 
-export function laatsteUitnodiging(deelnemer: Deelnemer): Date {
-  return deelnemer.uitnodigingen.map(value => new Date(value.datum))
-    .reduce((previousValue, currentValue) => previousValue > currentValue ? previousValue : currentValue, new Date(0));
-}
-
 export function isOnbeschikbaar(stoel: Stoel, stoelen: Stoel[]): boolean {
   const richting = stoelen[0].richting;
   let totRij = stoelen.map(value => value.rij).reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);

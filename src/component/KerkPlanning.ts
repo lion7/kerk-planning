@@ -10,7 +10,7 @@ import '@material/mwc-select';
 import '@material/mwc-top-app-bar-fixed';
 import '@vaadin/vaadin-date-picker';
 import '@vaadin/vaadin-time-picker';
-import {bepaalIngang, isDST, isHorizontaal, isoDatum, isOnbeschikbaar, isoTijd, laatsteUitnodiging, toCssRotation, volgendeZondag} from "../common/Util";
+import {bepaalIngang, isDST, isHorizontaal, isoDatum, isOnbeschikbaar, isoTijd, toCssRotation, volgendeZondag} from "../common/Util";
 
 export class KerkPlanning extends LitElement {
   static styles = css`
@@ -146,7 +146,13 @@ export class KerkPlanning extends LitElement {
                 ondragover="return false"
                 @drop="${this._reset}">
           ${this.deelnemers
-      .sort((a, b) => laatsteUitnodiging(a).getTime() - laatsteUitnodiging(b).getTime())
+      .sort((a, b) => {
+        let c = this.laatsteUitnodiging(a).getTime() - this.laatsteUitnodiging(b).getTime();
+        if (c == 0) {
+          c = a.email.localeCompare(b.email);
+        }
+        return c;
+      })
       .map(deelnemer => {
         return {deelnemer: deelnemer, opgave: this.findOpgave(deelnemer)};
       })
@@ -485,11 +491,24 @@ export class KerkPlanning extends LitElement {
     return !ingeplandeStoelen.some(stoelen => isOnbeschikbaar(stoel, stoelen));
   }
 
+  private laatsteUitnodiging(deelnemer: Deelnemer): Date {
+    const isBijbellezing = this.dienst?.toLowerCase()?.includes('bijbellezing');
+    return deelnemer.uitnodigingen
+      .filter(value => {
+        const b = value.dienst.toLowerCase().includes('bijbellezing');
+        return isBijbellezing ? b : !b;
+      })
+      .map(value => new Date(value.datum))
+      .reduce((previousValue, currentValue) => previousValue > currentValue ? previousValue : currentValue, new Date(0));
+  }
+
   private bepaalStarttijd(): Date {
     const dienst = this.dienst ? this.dienst.toLowerCase() : '';
     const datum = this.datum;
     const startTijd = new Date(datum);
-    if (dienst.includes("ochtend")) {
+    if (dienst.includes("bijbellezing")) {
+      startTijd.setHours(19, 30, 0, 0);
+    } else if (dienst.includes("ochtend")) {
       startTijd.setHours(9, 30, 0, 0);
     } else if ((dienst.includes("middag") && !dienst.includes("avond")) || (dienst.includes("middag") && dienst.includes("avond") && !isDST(datum))) {
       startTijd.setHours(15, 30, 0, 0);
