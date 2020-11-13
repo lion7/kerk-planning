@@ -84,8 +84,9 @@ export class KerkPlanning extends LitElement {
   @property({type: []}) deelnemers: Deelnemer[] = [];
   @property({type: []}) gebouwen: Gebouw[] = [];
   @property({type: Function}) ophalen: (datum: string, dienst: string, handler: (planning: Planning | undefined) => void) => void = (datum, dienst, handler) => {
-    console.log(`Ophalen van ${datum} ${dienst}`);
-    setTimeout(() => handler(undefined), 1000);
+    const filename = `planning ${datum} ${dienst}.json`;
+    console.log(`Ophalen van ${filename}`);
+    setTimeout(() => fetch(filename).then(value => value.json()).then(value => handler(value)).catch(() => handler(undefined)), 1000);
   };
   @property({type: Function}) opslaan: (planning: Planning, handler: () => void) => void = (planning, handler) => {
     console.log(planning);
@@ -96,7 +97,7 @@ export class KerkPlanning extends LitElement {
     setTimeout(() => handler(this.genodigden.length), 1000);
   };
 
-  @property({type: Boolean}) private loading = false;
+  @property({type: Number}) private loading = 0;
   @property({type: String}) private datum = volgendeZondag();
   @property({type: String}) private dienst: string | undefined = undefined;
   @property({type: []}) private genodigden: Genodigde[] = [];
@@ -133,7 +134,7 @@ export class KerkPlanning extends LitElement {
             ${this.renderDeelnemers()}
             ${this.renderGebouw()}
           </div> <!-- #planning -->
-          <div class="${this.loading ? 'loading' : ''}"></div>
+          <div class="${this.loading > 0 ? 'loading' : ''}"></div>
         </div> <!-- #top-app-bar-content -->
       </mwc-top-app-bar-fixed>
     `;
@@ -282,7 +283,7 @@ export class KerkPlanning extends LitElement {
 
     if (changedProperties.has('datum') || changedProperties.has('dienst')) {
       const dienst = this.dienst;
-      if (!this.loading && dienst) {
+      if (this.loading == 0 && dienst) {
         this._setLoading(true);
         this.ophalen(isoDatum(this.datum), dienst, planning => {
           this._setLoading(false);
@@ -460,7 +461,11 @@ export class KerkPlanning extends LitElement {
   }
 
   _setLoading(loading: boolean) {
-    this.loading = loading;
+    if (loading) {
+      this.loading++;
+    } else if (this.loading > 0) {
+      this.loading--;
+    }
   }
 
   private findDeelnemer(email: string): Deelnemer | undefined {
@@ -507,6 +512,8 @@ export class KerkPlanning extends LitElement {
     const datum = this.datum;
     const startTijd = new Date(datum);
     if (dienst.includes("bijbellezing")) {
+      startTijd.setHours(19, 30, 0, 0);
+    } else if (dienst.includes("sing-in")) {
       startTijd.setHours(19, 30, 0, 0);
     } else if (dienst.includes("ochtend")) {
       startTijd.setHours(9, 30, 0, 0);

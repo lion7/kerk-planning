@@ -1,10 +1,5 @@
 import {Planning} from "../common/Model";
-import CalendarEventUpdated = GoogleAppsScript.Events.CalendarEventUpdated;
 import {isoDatum} from "../common/Util";
-
-function onEventUpdated(event: CalendarEventUpdated) {
-  Logger.log(event);
-}
 
 function ophalen(datum: string, dienst: string): Planning | undefined {
   const filename = `planning ${datum} ${dienst}.json`
@@ -49,11 +44,13 @@ function uitnodigen(planning: Planning): number {
     const email = guest.getEmail().toLowerCase();
     const status = guest.getGuestStatus().toString();
     reedsGenodigden.push(email);
-    if (status === 'NO' || !planning.genodigden.some(genodigde => genodigde.email === email)) {
+    if (!planning.genodigden.some(genodigde => genodigde.email === email)) {
       verdwenenGenodigden.push(email);
-      event.removeGuest(email);
-      if (event.getGuestList().length == 0) {
-        event.deleteEvent();
+      if (status === 'NO') {
+        event.removeGuest(email);
+        if (event.getGuestList().length == 0) {
+          event.deleteEvent();
+        }
       }
     }
   }));
