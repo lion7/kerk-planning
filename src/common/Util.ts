@@ -1,9 +1,10 @@
-import {Deelnemer, Gebouw, Richting, Stoel} from "./Model";
+import {Gebouw, Richting, Stoel, Tijdstippen} from "./Model";
 
-export function isDST(datum: Date) {
-  const jan = new Date(datum.getFullYear(), 0, 1).getTimezoneOffset();
-  const jul = new Date(datum.getFullYear(), 6, 1).getTimezoneOffset();
-  return Math.max(jan, jul) != datum.getTimezoneOffset();
+export function isDST(datum: string) {
+  const date = new Date(datum);
+  const jan = new Date(date.getFullYear(), 0, 1).getTimezoneOffset();
+  const jul = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
+  return Math.max(jan, jul) != date.getTimezoneOffset();
 }
 
 export function isHorizontaal(richting: Richting) {
@@ -44,20 +45,24 @@ export function bepaalRichting(char: any): Richting | undefined {
   }
 }
 
-export function isoDatum(date: Date): string {
-  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
-}
-
-export function isoTijd(date: Date): string {
-  return `${date.getHours()}:${date.getMinutes()}`;
-}
-
-export function volgendeZondag(): Date {
+export function volgendeZondag(): string {
   const date = new Date();
   const daysUntilNextSunday = 7 - date.getDay();
   date.setDate(date.getDate() + daysUntilNextSunday);
-  date.setHours(9, 30, 0, 0);
-  return date;
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+}
+
+export function bepaalTijdstippen(datum: string): Tijdstippen {
+  const startTijd = new Date(datum);
+  const openingsTijd = new Date(datum);
+  const eindTijd = new Date(datum);
+  openingsTijd.setTime(startTijd.getTime() - 20 * 60 * 1000);
+  eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
+  return {
+    openingsTijd: openingsTijd.toISOString(),
+    startTijd: startTijd.toISOString(),
+    eindTijd: eindTijd.toISOString()
+  }
 }
 
 export function isOnbeschikbaar(stoel: Stoel, stoelen: Stoel[]): boolean {

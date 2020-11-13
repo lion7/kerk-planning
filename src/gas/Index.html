@@ -10,14 +10,11 @@
     <kerk-planning></kerk-planning>
     <script>
         const kp = document.querySelector('kerk-planning');
-        google.script.run.withSuccessHandler(result => kp.gebouwen = result).getGebouwen();
-        google.script.run.withSuccessHandler(result => kp.deelnemers = result).getDeelnemers();
-        kp.ophalen = (datum, dienst, handler) => { google.script.run.withSuccessHandler(handler).ophalen(datum, dienst); };
+        kp.getDeelnemers = (handler) => { google.script.run.withSuccessHandler(handler).getDeelnemers(); };
+        kp.getGebouwen = (handler) => { google.script.run.withSuccessHandler(handler).getGebouwen(); };
+        kp.getPlanning = (datum, dienst, handler) => { google.script.run.withSuccessHandler(handler).getPlanning(datum, dienst); };
         kp.opslaan = (planning, handler) => { google.script.run.withSuccessHandler(handler).opslaan(planning); };
-        kp.uitnodigen = (planning, handler) => { google.script.run.withSuccessHandler(result => {
-          handler(result);
-          google.script.run.withSuccessHandler(result => kp.deelnemers = result).getDeelnemers();
-        }).uitnodigen(planning); };
+        kp.uitnodigen = (planning, handler) => { google.script.run.withSuccessHandler(handler).uitnodigen(planning); };
     </script>
   </body>
 </html>

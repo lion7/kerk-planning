@@ -42,14 +42,14 @@ function getDeelnemers(): Deelnemer[] {
   to.setMonth(now.getMonth() + 3);
   calendar.getEvents(from, to, {'search': 'Uitnodiging'}).forEach(event => {
     event.getGuestList().forEach(guest => {
-      const datum = event.getStartTime().toISOString();
+      const datum = event.getStartTime();
       const dienst = event.getTitle().replace("Uitnodiging ", "").trim();
       const email = guest.getEmail();
       const status = guest.getGuestStatus().toString();
       const deelnemer = result.find(value => value.email === email);
       if (deelnemer) {
         deelnemer.uitnodigingen.push({
-            datum: datum,
+            datum: `${datum.getFullYear()}-${datum.getMonth() + 1}-${datum.getDate()}`,
             dienst: dienst,
             status: status
           });

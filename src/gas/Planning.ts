@@ -1,7 +1,7 @@
 import {Planning} from "../common/Model";
-import {isoDatum} from "../common/Util";
+import {bepaalTijdstippen} from "../common/Util";
 
-function ophalen(datum: string, dienst: string): Planning | undefined {
+function getPlanning(datum: string, dienst: string): Planning | undefined {
   const filename = `planning ${datum} ${dienst}.json`
   const iterator = DriveApp.getFilesByName(filename);
   if (iterator.hasNext()) {
@@ -17,8 +17,7 @@ function ophalen(datum: string, dienst: string): Planning | undefined {
 }
 
 function opslaan(planning: Planning) {
-  const datum = isoDatum(new Date(planning.tijdstippen.startTijd));
-  const filename = `planning ${datum} ${planning.dienst}.json`
+  const filename = `planning ${planning.datum} ${planning.dienst}.json`
   const iterator = DriveApp.getFilesByName(filename);
   if (iterator.hasNext()) {
     const f = iterator.next();
@@ -31,33 +30,28 @@ function opslaan(planning: Planning) {
 function uitnodigen(planning: Planning): number {
   opslaan(planning);
 
-  const openingsTijd = new Date(planning.tijdstippen.openingsTijd);
-  const startTijd = new Date(planning.tijdstippen.startTijd);
-  const eindTijd = new Date(planning.tijdstippen.eindTijd);
+  const tijdstippen = bepaalTijdstippen(planning.datum);
+  const openingsTijd = new Date(tijdstippen.openingsTijd);
+  const startTijd = new Date(tijdstippen.startTijd);
+  const eindTijd = new Date(tijdstippen.eindTijd);
+
+  const title = `Uitnodiging ${planning.dienst}`;
   const datum = openingsTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
   const tijdstip = openingsTijd.toLocaleString('nl', {hour: 'numeric', minute: 'numeric'});
 
   const calendar = CalendarApp.getDefaultCalendar();
   const reedsGenodigden: string[] = [];
   const verdwenenGenodigden: string[] = [];
-  calendar.getEvents(startTijd, eindTijd, {'search': 'Uitnodiging'}).forEach(event => event.getGuestList().forEach(guest => {
+  calendar.getEventsForDay(new Date(planning.datum), {'search': title}).forEach(event => event.getGuestList().forEach(guest => {
     const email = guest.getEmail().toLowerCase();
-    const status = guest.getGuestStatus().toString();
     reedsGenodigden.push(email);
     if (!planning.genodigden.some(genodigde => genodigde.email === email)) {
       verdwenenGenodigden.push(email);
-      if (status === 'NO') {
-        event.removeGuest(email);
-        if (event.getGuestList().length == 0) {
-          event.deleteEvent();
-        }
-      }
     }
   }));
   const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
 
   nieuweGenodigden.forEach(genodigde => {
-    const title = `Uitnodiging ${planning.dienst}`;
     let huisgenotenTekst = '';
     switch (genodigde.aantal) {
       case 1:
@@ -113,7 +107,7 @@ Kerkenraden Hervormde Gemeente Genemuiden`,
     event.setTag('Ingang', genodigde.ingang)
   });
 
-  const filename = `genodigden ${isoDatum(startTijd)} ${planning.dienst}.json`
+  const filename = `genodigden ${planning.datum} ${planning.dienst}.json`
   const iterator = DriveApp.getFilesByName(filename);
   let spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
   if (iterator.hasNext()) {

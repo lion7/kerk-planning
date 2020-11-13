@@ -35,7 +35,8 @@ export interface Tijdstippen {
 }
 
 export interface Planning {
-  tijdstippen: Tijdstippen;
+  datum: string;
+  tijd: string;
   dienst: string;
   genodigden: Genodigde[];
 }
