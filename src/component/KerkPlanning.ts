@@ -469,15 +469,12 @@ export class KerkPlanning extends LitElement {
         const p = planning as any;
         const startTijd = p?.tijdstippen?.startTijd;
         if (startTijd) {
-          console.log(`Oude planning met tijdstippen, startTijd = ${startTijd}`);
           const date = new Date(startTijd);
           this.tijd = `${date.getHours()}:${date.getMinutes()}`;
         } else if (planning.tijd) {
           this.tijd = planning.tijd;
         }
         this.genodigden = planning.genodigden;
-        console.log(planning);
-        console.log(this._planning());
       }
     });
   }
