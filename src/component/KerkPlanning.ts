@@ -257,21 +257,20 @@ export class KerkPlanning extends LitElement {
       const rotation = toCssRotation(stoel.richting);
       let styling = '';
       let beschikbaar = false;
-      let draggable = false;
+      let draggable = true;
       let title = 'Leeg';
       if (genodigde) {
         title = genodigde.naam;
         const status = this.findDeelnemer(genodigde.email)?.uitnodigingen?.find(value => value.datum == this.datum && value.dienst == this.dienst)?.status;
         if (status === 'YES') {
           styling = 'background-color: red';
+          draggable = false;
         } else if (status === 'NO') {
           styling = 'background-color: yellow';
-          draggable = true;
         } else if (status === 'INVITED') {
           styling = 'background-color: orange';
         } else {
           styling = 'background-color: orange';
-          draggable = true;
         }
       } else if (stoel.beschikbaarheid == Beschikbaarheid.Gereserveerd) {
         styling = 'background-color: cyan';
@@ -468,7 +467,7 @@ export class KerkPlanning extends LitElement {
       if (planning) {
         console.log(`Planning opgehaald met ${planning.genodigden.length} genodigden`);
         const p = planning as any;
-        const startTijd = p?.tijdstippen.startTijd;
+        const startTijd = p?.tijdstippen?.startTijd;
         if (startTijd) {
           console.log(`Oude planning met tijdstippen, startTijd = ${startTijd}`);
           const date = new Date(startTijd);
