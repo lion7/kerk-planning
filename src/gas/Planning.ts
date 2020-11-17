@@ -26,52 +26,29 @@ function opslaan(planning: Planning) {
   }
 }
 
-function uitnodigen(planning: Planning): number {
-  opslaan(planning);
-
-  const startTijd = new Date(`${planning.datum}T${planning.tijd}`);
-  const openingsTijd = new Date(startTijd);
-  const eindTijd = new Date(startTijd);
-  openingsTijd.setTime(startTijd.getTime() - 20 * 60 * 1000);
-  eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
-
-  const title = `Uitnodiging ${planning.dienst}`;
+function createDescription(dienst: string, naam: string, ingang: string, aantal: number, openingsTijd: Date): string {
   const datum = openingsTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
   const tijdstip = openingsTijd.toLocaleString('nl', {hour: 'numeric', minute: 'numeric'});
+  let huisgenotenTekst = '';
+  switch (aantal) {
+    case 1:
+      huisgenotenTekst = ``;
+      break;
+    case 2:
+      huisgenotenTekst = `samen met uw huisgenoot`;
+      break;
+    default:
+      huisgenotenTekst = `samen met uw ${aantal - 1} huisgenoten`;
+      break;
+  }
 
-  const calendar = CalendarApp.getDefaultCalendar();
-  const reedsGenodigden: string[] = [];
-  const verdwenenGenodigden: string[] = [];
-  calendar.getEventsForDay(new Date(planning.datum), {'search': title}).forEach(event => event.getGuestList().forEach(guest => {
-    const email = guest.getEmail().toLowerCase();
-    reedsGenodigden.push(email);
-    if (!planning.genodigden.some(genodigde => genodigde.email === email)) {
-      verdwenenGenodigden.push(email);
-    }
-  }));
-  const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
-
-  nieuweGenodigden.forEach(genodigde => {
-    let huisgenotenTekst = '';
-    switch (genodigde.aantal) {
-      case 1:
-        huisgenotenTekst = ``;
-        break;
-      case 2:
-        huisgenotenTekst = `samen met uw huisgenoot`;
-        break;
-      default:
-        huisgenotenTekst = `samen met uw ${genodigde.aantal - 1} huisgenoten`;
-        break;
-    }
-    const event = calendar.createEvent(title, startTijd, eindTijd, {
-      description: `Geachte ${genodigde.naam},
+  return `Geachte ${naam},
 
 Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen, kunnen wij u hierbij meedelen dat u
-${huisgenotenTekst} bent ingedeeld om op D.V. ${datum} de ${planning.dienst} bij te wonen.
+${huisgenotenTekst} bent ingedeeld om op D.V. ${datum} de ${dienst} bij te wonen.
 U wordt hartelijk uitgenodigd voor deze dienst.
 
-• U wordt verwacht bij de ingang ${genodigde.ingang}.
+• U wordt verwacht bij de ingang ${ingang}.
 • De deuren van de kerk gaan open om ${tijdstip} uur
 • U wordt hier opgewacht door een uitgangshulp. Deze zal uw naam aantekenen op een lijst die wij moeten
   bijhouden (om bij eventuele nieuwe uitbraken te kunnen achterhalen met wie bepaalde personen in
@@ -95,7 +72,35 @@ is dat met minder personen. U bevestigt dan met JA.  Kan er niemand komen dan ge
 Wij zullen dan iemand anders proberen uit te nodigen.
 
 Wij wensen u van harte Gods zegen toe onder de bediening van het Woord,
-Kerkenraden Hervormde Gemeente Genemuiden`,
+Kerkenraden Hervormde Gemeente Genemuiden`;
+}
+
+function uitnodigen(planning: Planning): number {
+  opslaan(planning);
+
+  const startTijd = new Date(`${planning.datum}T${planning.tijd}`);
+  const openingsTijd = new Date(startTijd);
+  const eindTijd = new Date(startTijd);
+  openingsTijd.setTime(startTijd.getTime() - 20 * 60 * 1000);
+  eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
+
+  const title = `Uitnodiging ${planning.dienst}`;
+
+  const calendar = CalendarApp.getDefaultCalendar();
+  const reedsGenodigden: string[] = [];
+  const verdwenenGenodigden: string[] = [];
+  calendar.getEventsForDay(new Date(planning.datum), {'search': title}).forEach(event => event.getGuestList().forEach(guest => {
+    const email = guest.getEmail().toLowerCase();
+    reedsGenodigden.push(email);
+    if (!planning.genodigden.some(genodigde => genodigde.email === email)) {
+      verdwenenGenodigden.push(email);
+    }
+  }));
+  const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
+
+  nieuweGenodigden.forEach(genodigde => {
+    const event = calendar.createEvent(title, startTijd, eindTijd, {
+      description: createDescription(planning.dienst, genodigde.naam, genodigde.ingang, genodigde.aantal, openingsTijd),
       guests: genodigde.email,
       sendInvites: true
     });
