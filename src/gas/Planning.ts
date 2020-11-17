@@ -112,7 +112,7 @@ function uitnodigen(planning: Planning): number {
     event.setTag('Ingang', genodigde.ingang)
   });
 
-  const filename = `genodigden ${planning.datum} ${planning.dienst}.json`
+  const filename = `genodigden ${planning.datum} ${planning.dienst}`
   const iterator = DriveApp.getFilesByName(filename);
   let spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
   if (iterator.hasNext()) {
