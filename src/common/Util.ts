@@ -52,19 +52,6 @@ export function volgendeZondag(): string {
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 }
 
-export function bepaalTijdstippen(datum: string): Tijdstippen {
-  const startTijd = new Date(datum);
-  const openingsTijd = new Date(datum);
-  const eindTijd = new Date(datum);
-  openingsTijd.setTime(startTijd.getTime() - 20 * 60 * 1000);
-  eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
-  return {
-    openingsTijd: openingsTijd.toISOString(),
-    startTijd: startTijd.toISOString(),
-    eindTijd: eindTijd.toISOString()
-  }
-}
-
 export function isOnbeschikbaar(stoel: Stoel, stoelen: Stoel[]): boolean {
   const richting = stoelen[0].richting;
   let totRij = stoelen.map(value => value.rij).reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);

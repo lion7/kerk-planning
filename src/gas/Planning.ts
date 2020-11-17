@@ -1,5 +1,4 @@
 import {Planning} from "../common/Model";
-import {bepaalTijdstippen} from "../common/Util";
 
 function getPlanning(datum: string, dienst: string): Planning | undefined {
   const filename = `planning ${datum} ${dienst}.json`
@@ -30,10 +29,11 @@ function opslaan(planning: Planning) {
 function uitnodigen(planning: Planning): number {
   opslaan(planning);
 
-  const tijdstippen = bepaalTijdstippen(planning.datum);
-  const openingsTijd = new Date(tijdstippen.openingsTijd);
-  const startTijd = new Date(tijdstippen.startTijd);
-  const eindTijd = new Date(tijdstippen.eindTijd);
+  const startTijd = new Date(`${planning.datum}T${planning.tijd}`);
+  const openingsTijd = new Date(startTijd);
+  const eindTijd = new Date(startTijd);
+  openingsTijd.setTime(startTijd.getTime() - 20 * 60 * 1000);
+  eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
 
   const title = `Uitnodiging ${planning.dienst}`;
   const datum = openingsTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
