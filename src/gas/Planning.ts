@@ -88,14 +88,8 @@ function uitnodigen(planning: Planning): number {
 
   const calendar = CalendarApp.getDefaultCalendar();
   const reedsGenodigden: string[] = [];
-  const verdwenenGenodigden: string[] = [];
-  calendar.getEventsForDay(new Date(planning.datum), {'search': title}).forEach(event => event.getGuestList().forEach(guest => {
-    const email = guest.getEmail().toLowerCase();
-    reedsGenodigden.push(email);
-    if (!planning.genodigden.some(genodigde => genodigde.email === email)) {
-      verdwenenGenodigden.push(email);
-    }
-  }));
+  calendar.getEventsForDay(new Date(planning.datum), {'search': title})
+    .forEach(event => event.getGuestList().forEach(guest => reedsGenodigden.push(guest.getEmail().toLowerCase())));
   const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
 
   nieuweGenodigden.forEach(genodigde => {
@@ -114,39 +108,17 @@ function uitnodigen(planning: Planning): number {
 
   const filename = `genodigden ${planning.datum} ${planning.dienst}`
   const iterator = DriveApp.getFilesByName(filename);
-  let spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
   if (iterator.hasNext()) {
     const file = iterator.next();
-    spreadsheet = SpreadsheetApp.openById(file.getId());
-  } else {
-    spreadsheet = SpreadsheetApp.create(filename);
+    file.setTrashed(true);
   }
-
-  nieuweGenodigden.forEach(genodigde => {
-    let sheet = spreadsheet.getSheetByName(genodigde.ingang);
-    if (!sheet) {
-      sheet = spreadsheet.insertSheet();
-      sheet.setName(genodigde.ingang);
-      sheet.appendRow(['Naam', 'Aantal', 'Email'])
-    }
-    sheet.appendRow([genodigde.naam, genodigde.aantal, genodigde.email]);
-  });
-  verdwenenGenodigden.forEach(email => {
-    spreadsheet.getSheets().forEach(sheet => {
-      const rows = sheet.getDataRange().getValues();
-      for (let i = 1; i < rows.length; i++) {
-        if (rows[i][3] === email) {
-          sheet.deleteRow(i);
-          break;
-        }
-      }
-    });
-  });
-
-  const blad1 = spreadsheet.getSheetByName('Blad1');
-  if (blad1) {
-    spreadsheet.deleteSheet(blad1);
-  }
+  const spreadsheet = SpreadsheetApp.create(filename);
+  spreadsheet.appendRow(['Ingang', 'Naam', 'Aantal', 'Email']);
+  planning.genodigden.forEach(genodigde => spreadsheet.appendRow([genodigde.ingang, genodigde.naam, genodigde.aantal, genodigde.email]));
+  spreadsheet.getRange('1:1').setBackground('#0000ff').setFontColor('#ffffff');
+  spreadsheet.setFrozenRows(1);
+  spreadsheet.sort(1);
+  spreadsheet.getActiveSheet().autoResizeColumns(1, spreadsheet.getLastColumn());
 
   return nieuweGenodigden.length;
 }
