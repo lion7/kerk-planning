@@ -556,6 +556,7 @@ export class KerkPlanning extends LitElement {
   private laatsteUitnodiging(deelnemer: Deelnemer): Date {
     const isBijbellezing = this.dienst.toLowerCase().includes('bijbellezing');
     return deelnemer.uitnodigingen
+      .filter(value => value.status !== 'NO')
       .filter(value => {
         const b = value.dienst.toLowerCase().includes('bijbellezing');
         return isBijbellezing ? b : !b;
