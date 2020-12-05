@@ -76,6 +76,7 @@ Kerkenraden Hervormde Gemeente Genemuiden`;
 }
 
 function uitnodigen(planning: Planning): number {
+  const oudePlanning = getPlanning(planning.datum, planning.dienst);
   opslaan(planning);
 
   const startTijd = new Date(`${planning.datum}T${planning.tijd}`);
@@ -87,7 +88,7 @@ function uitnodigen(planning: Planning): number {
   const title = `Uitnodiging ${planning.dienst}`;
 
   const calendar = CalendarApp.getDefaultCalendar();
-  const reedsGenodigden: string[] = [];
+  const reedsGenodigden: string[] = oudePlanning?.genodigden?.map(value => value.email) || [];
   calendar.getEventsForDay(new Date(planning.datum), {'search': title})
     .forEach(event => event.getGuestList().forEach(guest => reedsGenodigden.push(guest.getEmail().toLowerCase())));
   const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
