@@ -94,6 +94,7 @@ function uitnodigen(planning: Planning): number {
   const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
 
   nieuweGenodigden.forEach(genodigde => {
+    Logger.log(`${title} voor ${genodigde.naam} (${genodigde.aantal} personen) met email ${genodigde.email}`);
     const event = calendar.createEvent(title, startTijd, eindTijd, {
       description: createDescription(planning.dienst, genodigde.naam, genodigde.ingang, genodigde.aantal, openingsTijd),
       guests: genodigde.email,
