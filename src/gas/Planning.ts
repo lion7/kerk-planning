@@ -76,23 +76,18 @@ Kerkenraden Hervormde Gemeente Genemuiden`;
 }
 
 function uitnodigen(planning: Planning): number {
-  const oudePlanning = getPlanning(planning.datum, planning.dienst);
-  opslaan(planning);
-
+  const title = `Uitnodiging ${planning.dienst}`;
   const startTijd = new Date(`${planning.datum}T${planning.tijd}`);
   const openingsTijd = new Date(startTijd);
   const eindTijd = new Date(startTijd);
   openingsTijd.setTime(startTijd.getTime() - 20 * 60 * 1000);
   eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
 
-  const title = `Uitnodiging ${planning.dienst}`;
-
-  const calendar = CalendarApp.getDefaultCalendar();
-  const reedsGenodigden: string[] = oudePlanning?.genodigden?.filter(value => value.eventId)?.map(value => value.email) || [];
-  calendar.getEventsForDay(new Date(planning.datum), {'search': title})
-    .forEach(event => event.getGuestList().forEach(guest => reedsGenodigden.push(guest.getEmail().toLowerCase())));
+  const oudePlanning = getPlanning(planning.datum, planning.dienst);
+  const reedsGenodigden = oudePlanning?.genodigden?.filter(value => value.eventId)?.map(value => value.email) || [];
   const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
 
+  const calendar = CalendarApp.getDefaultCalendar();
   nieuweGenodigden.forEach(genodigde => {
     Logger.log(`${title} voor ${genodigde.naam} (${genodigde.aantal} personen) met email ${genodigde.email}`);
     const event = calendar.createEvent(title, startTijd, eindTijd, {
