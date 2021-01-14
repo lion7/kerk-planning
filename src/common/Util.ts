@@ -1,4 +1,4 @@
-import {Gebouw, Richting, Stoel, Tijdstippen} from "./Model";
+import {Gebouw, Richting, Stoel} from "./Model";
 
 export function isDST(datum: string) {
   const date = new Date(datum);
@@ -49,7 +49,8 @@ export function volgendeZondag(): string {
   const date = new Date();
   const daysUntilNextSunday = 7 - date.getDay();
   date.setDate(date.getDate() + daysUntilNextSunday);
-  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  const isoString = date.toISOString();
+  return isoString.substring(0, isoString.indexOf('T'));
 }
 
 export function isOnbeschikbaar(stoel: Stoel, stoelen: Stoel[]): boolean {
