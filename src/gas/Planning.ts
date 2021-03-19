@@ -136,7 +136,7 @@ function uitnodigen(planning: Planning): number {
   const calendar = CalendarApp.getDefaultCalendar();
   nieuweGenodigden.forEach(genodigde => {
     Logger.log(`${title} voor ${genodigde.naam} (${genodigde.aantal} personen) met email ${genodigde.email}`);
-    const description = genodigde.email in ['michalnawrocki1992@gmail.com', 'gdeleeuw7+test3@gmail.com'] ?
+    const description = ['michalnawrocki1992@gmail.com', 'gdeleeuw7+test3@gmail.com'].indexOf(genodigde.email) != -1 ?
       createDescriptionEnglish(planning.dienst, openingsTijd, genodigde) :
       createDescriptionDutch(planning.dienst, openingsTijd, genodigde);
     const event = calendar.createEvent(title, startTijd, eindTijd, {
