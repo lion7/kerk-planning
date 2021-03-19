@@ -44,8 +44,9 @@ function createDescriptionDutch(dienst: string, openingsTijd: Date, genodigde: G
 
   return `Geachte ${genodigde.naam},
 
-Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen, kunnen wij u hierbij meedelen dat u
-${huisgenotenTekst} bent ingedeeld om op D.V. ${datum} de ${dienst} bij te wonen.
+Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen,
+kunnen wij u hierbij meedelen dat u ${huisgenotenTekst}
+bent ingedeeld om op D.V. ${datum} de ${dienst} bij te wonen.
 U wordt hartelijk uitgenodigd voor deze dienst.
 
 • U wordt verwacht bij de ingang ${genodigde.ingang}.
@@ -93,8 +94,9 @@ function createDescriptionEnglish(dienst: string, openingsTijd: Date, genodigde:
 
   return `Dear ${genodigde.naam},
 
-Following your registration to attend a church service, we hereby inform you that you
-${huisgenotenTekst} are scheduled to attend the ${dienst} on D.V. ${datum}.
+Following your registration to attend a church service,
+we hereby inform you that you ${huisgenotenTekst}
+are scheduled to attend the ${dienst} on ${datum}.
 You are cordially invited to this service.
 
 • You are expected at the entrance ${genodigde.ingang}.
