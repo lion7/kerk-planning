@@ -29,12 +29,6 @@ export interface Genodigde {
   eventId: string | undefined;
 }
 
-export interface Tijdstippen {
-  openingsTijd: string;
-  startTijd: string;
-  eindTijd: string;
-}
-
 export interface Planning {
   datum: string;
   tijd: string;

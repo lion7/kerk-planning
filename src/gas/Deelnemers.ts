@@ -26,13 +26,15 @@ function getDeelnemers(): Deelnemer[] {
   const sheet = SpreadsheetApp.getActiveSheet();
   const deelnemers = sheet.getDataRange().getValues();
   const headerRow = deelnemers[0];
-  const result: Deelnemer[] = [];
+  const rows: Deelnemer[] = [];
   for (let i = 1; i < deelnemers.length; i++) {
     if (deelnemers[i][0] == '') {
       continue;
     }
-    result.push(createDeelnemer(deelnemers[i], headerRow));
+    rows.push(createDeelnemer(deelnemers[i], headerRow));
   }
+  // reverse the array so the last entry of duplicates is always used
+  const result = rows.reverse();
 
   const calendar = CalendarApp.getDefaultCalendar();
   const now = new Date();

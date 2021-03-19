@@ -1,13 +1,43 @@
 import {Gebouw, Richting, Stoel} from "./Model";
 
-export function isDST(datum: string) {
+function volgendeDag(datum: string, day: number): string {
   const date = new Date(datum);
-  const jan = new Date(date.getFullYear(), 0, 1).getTimezoneOffset();
-  const jul = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
-  return Math.max(jan, jul) != date.getTimezoneOffset();
+  const daysRemaining = (7 + day - date.getDay()) % 7;
+  date.setDate(date.getDate() + daysRemaining);
+  const isoString = date.toISOString();
+  return isoString.substring(0, isoString.indexOf('T'));
 }
 
-export function isHorizontaal(richting: Richting) {
+function bepaalBiddag(year: number): string {
+  const maart = new Date(year, 2, 8); // 1 + 7 = 2de week van maart
+  return volgendeDag(maart.toISOString(), 4);
+}
+
+function bepaalDankdag(year: number): string {
+  const november = new Date(year, 10, 1);
+  return volgendeDag(november.toISOString(), 4);
+}
+
+export function volgendeZondag(): string {
+  const today = new Date();
+  return volgendeDag(today.toISOString(), 0);
+}
+
+export function isTussenBiddagEnDankdag(datum: string): boolean {
+  const date = new Date(datum);
+  const biddag = new Date(bepaalBiddag(date.getFullYear()));
+  const dankdag = new Date(bepaalDankdag(date.getFullYear()));
+  return date > biddag && date < dankdag;
+}
+
+export function isTussenDankdagEnBiddag(datum: string): boolean {
+  const date = new Date(datum);
+  const biddag = new Date(bepaalBiddag(date.getFullYear()));
+  const dankdag = new Date(bepaalDankdag(date.getFullYear()));
+  return date < biddag || date > dankdag;
+}
+
+export function isHorizontaal(richting: Richting): boolean {
   return richting === Richting.Noord || richting === Richting.Zuid;
 }
 
@@ -44,15 +74,6 @@ export function bepaalRichting(char: any): Richting | undefined {
       return undefined;
   }
 }
-
-export function volgendeZondag(): string {
-  const date = new Date();
-  const daysUntilNextSunday = 7 - date.getDay();
-  date.setDate(date.getDate() + daysUntilNextSunday);
-  const isoString = date.toISOString();
-  return isoString.substring(0, isoString.indexOf('T'));
-}
-
 export function isOnbeschikbaar(stoel: Stoel, stoelen: Stoel[]): boolean {
   const richting = stoelen[0].richting;
   let totRij = stoelen.map(value => value.rij).reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);

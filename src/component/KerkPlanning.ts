@@ -10,7 +10,7 @@ import '@material/mwc-select';
 import '@material/mwc-top-app-bar-fixed';
 import '@vaadin/vaadin-date-picker';
 import '@vaadin/vaadin-time-picker';
-import {bepaalIngang, isDST, isHorizontaal, isOnbeschikbaar, toCssRotation, volgendeZondag} from "../common/Util";
+import {bepaalIngang, isHorizontaal, isOnbeschikbaar, isTussenBiddagEnDankdag, isTussenDankdagEnBiddag, toCssRotation, volgendeZondag} from "../common/Util";
 
 export class KerkPlanning extends LitElement {
   static styles = css`
@@ -83,17 +83,17 @@ export class KerkPlanning extends LitElement {
   @property({type: Function}) getDeelnemers: (handler: (deelnemers: Deelnemer[] | undefined) => void) => void = (handler) => {
     const filename = 'deelnemers.json';
     console.log(`Ophalen van ${filename}`);
-    setTimeout(() => fetch(filename).then(value => value.json()).then(value => handler(value), reason => { console.log(reason); handler(undefined); }), 1000);
+    fetch(filename).then(value => value.status == 200 ? value.json() : undefined).then(value => handler(value), reason => { console.log(reason); handler(undefined); });
   };
   @property({type: Function}) getGebouwen: (handler: (deelnemers: Gebouw[] | undefined) => void) => void = (handler) => {
     const filename = 'gebouwen.json';
     console.log(`Ophalen van ${filename}`);
-    fetch(filename).then(value => value.json()).then(value => handler(value), reason => { console.log(reason); handler(undefined); });
+    fetch(filename).then(value => value.status == 200 ? value.json() : undefined).then(value => handler(value), reason => { console.log(reason); handler(undefined); });
   };
   @property({type: Function}) getPlanning: (datum: string, dienst: string, handler: (planning: Planning | undefined) => void) => void = (datum, dienst, handler) => {
     const filename = `planning ${datum} ${dienst}.json`;
     console.log(`Ophalen van ${filename}`);
-    setTimeout(() => fetch(filename).then(value => value.json()).then(value => handler(value), reason => { console.log(reason); handler(undefined); }), 500);
+    fetch(filename).then(value => value.status == 200 ? value.json() : undefined).then(value => handler(value), reason => { console.log(reason); handler(undefined); });
   };
   @property({type: Function}) opslaan: (planning: Planning, handler: () => void) => void = (planning, handler) => {
     console.log(JSON.stringify(planning));
@@ -116,7 +116,7 @@ export class KerkPlanning extends LitElement {
   protected update(changedProperties: PropertyValues) {
     super.update(changedProperties)
 
-    if (changedProperties.has('dienst')) {
+    if (changedProperties.has('dienst') || changedProperties.has('datum')) {
       this.tijd = this.bepaalStarttijd();
     }
 
@@ -467,12 +467,7 @@ export class KerkPlanning extends LitElement {
       this._setLoading(false);
       if (planning) {
         console.log(`Planning opgehaald met ${planning.genodigden.length} genodigden`);
-        const p = planning as any;
-        const startTijd = p?.tijdstippen?.startTijd;
-        if (startTijd) {
-          const date = new Date(startTijd);
-          this.tijd = `${date.getHours()}:${date.getMinutes()}`;
-        } else if (planning.tijd) {
+        if (planning.tijd) {
           this.tijd = planning.tijd;
         }
         this.genodigden = planning.genodigden;
@@ -574,9 +569,9 @@ export class KerkPlanning extends LitElement {
       return "19:30";
     } else if (dienst.includes("ochtend")) {
       return "09:30";
-    } else if ((dienst.includes("middag") && !dienst.includes("avond")) || (dienst.includes("middag") && dienst.includes("avond") && !isDST(this.datum))) {
+    } else if ((dienst.includes("middag") && !dienst.includes("avond")) || (dienst.includes("middag") && dienst.includes("avond") && isTussenDankdagEnBiddag(this.datum))) {
       return "15:30";
-    } else if ((!dienst.includes("middag") && dienst.includes("avond")) || (dienst.includes("middag") && dienst.includes("avond") && isDST(this.datum))) {
+    } else if ((!dienst.includes("middag") && dienst.includes("avond")) || (dienst.includes("middag") && dienst.includes("avond") && isTussenBiddagEnDankdag(this.datum))) {
       return "19:00";
     } else {
       return this.tijd;
