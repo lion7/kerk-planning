@@ -26,7 +26,6 @@ export interface Genodigde {
   aantal: number;
   ingang: string;
   stoelen: Stoel[];
-  eventId: string | undefined;
 }
 
 export interface Planning {

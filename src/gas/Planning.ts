@@ -132,7 +132,7 @@ function uitnodigen(planning: Planning): number {
   eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
 
   const oudePlanning = getPlanning(planning.datum, planning.dienst);
-  const reedsGenodigden = oudePlanning?.genodigden?.filter(value => value.eventId)?.map(value => value.email) || [];
+  const reedsGenodigden = oudePlanning?.genodigden?.map(value => value.email) || [];
   const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
 
   const calendar = CalendarApp.getDefaultCalendar();
@@ -152,7 +152,6 @@ function uitnodigen(planning: Planning): number {
     event.setTag('Naam', genodigde.naam)
     event.setTag('Aantal', genodigde.aantal.toString())
     event.setTag('Ingang', genodigde.ingang)
-    genodigde.eventId = event.getId();
   });
 
   opslaan(planning);

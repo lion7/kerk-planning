@@ -375,8 +375,7 @@ export class KerkPlanning extends LitElement {
         aantal: aantalStoelenNodig,
         email: deelnemer.email,
         ingang: bepaalIngang(gebouw, gevondenStoelen[0]),
-        stoelen: gevondenStoelen,
-        eventId: undefined
+        stoelen: gevondenStoelen
       };
       this.genodigden = [...this.genodigden.filter(value => value.email != deelnemerEmail), genodigde];
     }
