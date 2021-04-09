@@ -26,6 +26,18 @@ function opslaan(planning: Planning) {
   }
 }
 
+function getReedsGenodigden(startTijd: Date, eindTijd: Date): string[] {
+  const result: string[] = [];
+  const calendar = CalendarApp.getDefaultCalendar();
+  calendar.getEvents(startTijd, eindTijd).forEach(event => {
+    event.getGuestList().forEach(guest => {
+      const email = guest.getEmail();
+      result.push(email);
+    });
+  });
+  return result;
+}
+
 function createDescriptionDutch(dienst: string, openingsTijd: Date, genodigde: Genodigde): string {
   const datum = openingsTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
   const tijdstip = openingsTijd.toLocaleString('nl', {hour: 'numeric', minute: 'numeric'});
@@ -131,14 +143,13 @@ function uitnodigen(planning: Planning): number {
   openingsTijd.setTime(startTijd.getTime() - 20 * 60 * 1000);
   eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
 
-  const oudePlanning = getPlanning(planning.datum, planning.dienst);
-  const reedsGenodigden = oudePlanning?.genodigden?.map(value => value.email) || [];
+  const reedsGenodigden = getReedsGenodigden(startTijd, eindTijd);
   const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
 
   const calendar = CalendarApp.getDefaultCalendar();
   nieuweGenodigden.forEach(genodigde => {
     Logger.log(`${title} voor ${genodigde.naam} (${genodigde.aantal} personen) met email ${genodigde.email}`);
-    const description = ['michalnawrocki1992@gmail.com', 'gdeleeuw7+test3@gmail.com'].indexOf(genodigde.email) != -1 ?
+    const description = ['michalnawrocki1992@gmail.com', 'gdeleeuw7@gmail.com'].indexOf(genodigde.email) != -1 ?
       createDescriptionEnglish(planning.dienst, openingsTijd, genodigde) :
       createDescriptionDutch(planning.dienst, openingsTijd, genodigde);
     const event = calendar.createEvent(title, startTijd, eindTijd, {
