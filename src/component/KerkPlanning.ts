@@ -1,5 +1,5 @@
 import {css, html, LitElement, property, PropertyValues} from 'lit-element';
-import {Beschikbaarheid, Deelnemer, Gebouw, Genodigde, Opgave, Planning, Stoel} from "../common/Model";
+import {Beschikbaarheid, Deelnemer, Gebouw, Genodigde, Opgave, Planning, Stoel, Uitnodiging} from "../common/Model";
 import '@webcomponents/webcomponentsjs/webcomponents-loader';
 import '@material/mwc-icon';
 import '@material/mwc-button';
@@ -246,7 +246,7 @@ export class KerkPlanning extends LitElement {
             let title = 'Leeg';
             if (genodigde) {
               title = genodigde.naam;
-              const status = this.findDeelnemer(genodigde.email)?.uitnodigingen?.find(value => value.datum == this.datum && value.dienst == this.dienst)?.status;
+              const status = this.findUitnodiging(genodigde.email)?.status;
               if (status === 'YES') {
                 styling = 'background-color: red';
                 draggable = false;
@@ -530,6 +530,18 @@ export class KerkPlanning extends LitElement {
 
   private findDeelnemer(email: string): Deelnemer | undefined {
     return this.deelnemers.find(value => value.email == email);
+  }
+
+  private findUitnodiging(email: string): Uitnodiging | undefined {
+    const diensten: string[] = [];
+    diensten.push(this.dienst);
+    if (this.dienst.startsWith("Middagdienst")) {
+      diensten.push(this.dienst.replace("Middagdienst", "Middag- of Avonddienst"))
+    } else if (this.dienst.startsWith("Avonddienst")) {
+      diensten.push(this.dienst.replace("Avonddienst", "Middag- of Avonddienst"))
+    }
+
+    return this.findDeelnemer(email)?.uitnodigingen?.find(value => value.datum == this.datum && diensten.includes(value.dienst));
   }
 
   private findGenodigde(stoel: Stoel): Genodigde | undefined {
