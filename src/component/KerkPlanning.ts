@@ -417,14 +417,10 @@ export class KerkPlanning extends LitElement {
       if (deelnemers) {
         console.log(`Lijst opgehaald met ${deelnemers.length} deelnemers`);
         const diensten: string[] = [];
-        deelnemers.forEach(deelnemer => {
+        deelnemers.forEach(deelnemer =>
           deelnemer.opgaven.forEach(opgave => {
             if (!diensten.includes(opgave.dienst)) diensten.push(opgave.dienst);
-          });
-          deelnemer.uitnodigingen.forEach(uitnodiging => {
-            if (uitnodiging.datum >= this.datum && !diensten.includes(uitnodiging.dienst)) diensten.push(uitnodiging.dienst);
-          });
-        });
+          }));
         this.deelnemers = deelnemers;
         this.diensten = diensten;
       } else {
