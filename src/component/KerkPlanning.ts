@@ -161,22 +161,17 @@ export class KerkPlanning extends LitElement {
                 ondragover="return false"
                 @drop="${this._reset}">
         ${this.deelnemers
-          .sort((a, b) => {
-            let c = this.laatsteUitnodiging(a).getTime() - this.laatsteUitnodiging(b).getTime();
-            if (c == 0) {
-              c = a.email.localeCompare(b.email);
-            }
-            return c;
-          })
-          .map(deelnemer => {
-            return {deelnemer: deelnemer, opgave: this.findOpgave(deelnemer)};
-          })
+          .sort((a, b) => this.compareDeelnemer(a, b))
+          .map(deelnemer => ({deelnemer: deelnemer, opgave: this.findOpgave(deelnemer)}))
           .filter(value => !!value.opgave)
           .map(value => {
             const deelnemer = value.deelnemer;
             const opgave = value.opgave;
             const aantal = opgave ? opgave.aantal : '?';
-            const uitnodigingen = deelnemer.uitnodigingen.map(value => html`
+            const laatsteUitnodigingen = []; //deelnemer.uitnodigingen;
+            const laatsteUitnodiging = this.laatsteUitnodiging(deelnemer);
+            if (laatsteUitnodiging) laatsteUitnodigingen.push(laatsteUitnodiging);
+            const uitnodigingen = laatsteUitnodigingen.map(value => html`
               <li>${new Date(value.datum).toLocaleString('nl', {
                 day: 'numeric',
                 month: 'numeric',
@@ -568,16 +563,16 @@ export class KerkPlanning extends LitElement {
     return !ingeplandeStoelen.some(stoelen => isOnbeschikbaar(stoel, stoelen));
   }
 
-  private laatsteUitnodiging(deelnemer: Deelnemer): Date {
+  private laatsteUitnodiging(deelnemer: Deelnemer): Uitnodiging | undefined {
     const isBijbellezing = this.dienst.toLowerCase().includes('bijbellezing');
-    return deelnemer.uitnodigingen
+    const uitnodigingen = deelnemer.uitnodigingen
       .filter(value => value.status !== 'NO')
       .filter(value => {
         const b = value.dienst.toLowerCase().includes('bijbellezing');
         return isBijbellezing ? b : !b;
-      })
-      .map(value => new Date(value.datum))
-      .reduce((previousValue, currentValue) => previousValue > currentValue ? previousValue : currentValue, new Date(0));
+      });
+    return uitnodigingen.length == 0 ? undefined :
+      uitnodigingen.reduce((previousValue, currentValue) => new Date(previousValue.datum) > new Date(currentValue.datum) ? previousValue : currentValue);
   }
 
   private huidigGebouw(): Gebouw | undefined {
@@ -607,5 +602,32 @@ export class KerkPlanning extends LitElement {
 
   private datumTijd(): Date {
     return new Date(`${this.datum}T${this.tijd}`);
+  }
+
+  private compareDeelnemer(a: Deelnemer, b: Deelnemer): number {
+    const al = this.laatsteUitnodiging(a);
+    const ab = this.laatsteUitnodiging(b);
+    if (al == undefined && ab == undefined) {
+      return 0;
+    } else if (al == undefined) {
+      return 1;
+    } else if (ab == undefined) {
+      return -1;
+    }
+
+    let c = new Date(al.datum).getTime() - new Date(ab.datum).getTime();
+    if (c == 0) {
+      if (al.dienst == this.dienst) {
+        c = 1;
+      } else if (ab.dienst == this.dienst) {
+        c = -1;
+      } else {
+        c = al.dienst.localeCompare(ab.dienst);
+      }
+    }
+    if (c == 0) {
+      c = a.email.localeCompare(b.email);
+    }
+    return c;
   }
 }
