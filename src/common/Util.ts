@@ -1,4 +1,4 @@
-import {Gebouw, Richting, Stoel} from "./Model";
+import {Gebouw, Ingang, Richting, Stoel} from "./Model";
 
 function volgendeDag(datum: string, day: number): string {
   const date = new Date(datum);
@@ -74,6 +74,7 @@ export function bepaalRichting(char: any): Richting | undefined {
       return undefined;
   }
 }
+
 export function isOnbeschikbaar(stoel: Stoel, stoelen: Stoel[]): boolean {
   const richting = stoelen[0].richting;
   let totRij = stoelen.map(value => value.rij).reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
@@ -94,31 +95,37 @@ export function isOnbeschikbaar(stoel: Stoel, stoelen: Stoel[]): boolean {
   return (stoel.rij >= vanRij && stoel.rij <= totRij) && (stoel.kolom >= vanKolom && stoel.kolom <= totKolom)
 }
 
+function gewicht(stoel: Stoel, ingang: Ingang): number {
+  let matches = true;
+  let predicates = 0;
+  if (ingang.richting !== undefined) {
+    matches = matches && stoel.richting == ingang.richting;
+    predicates++;
+  }
+  if (ingang.vanRij !== undefined) {
+    matches = matches && stoel.rij >= ingang.vanRij;
+    predicates++;
+  }
+  if (ingang.totRij !== undefined) {
+    matches = matches && stoel.rij < ingang.totRij;
+    predicates++;
+  }
+  if (ingang.vanKolom !== undefined) {
+    matches = matches && stoel.kolom >= ingang.vanKolom;
+    predicates++;
+  }
+  if (ingang.totKolom !== undefined) {
+    matches = matches && stoel.kolom < ingang.totKolom;
+    predicates++;
+  }
+  if (matches) {
+    return predicates;
+  } else {
+    return 0;
+  }
+}
+
 export function bepaalIngang(gebouw: Gebouw, stoel: Stoel): string {
-  const ingang = gebouw.ingangen.find(ingang => {
-    let matches = true;
-    let predicates = 0;
-    if (ingang.richting !== undefined) {
-      matches = matches && stoel.richting == ingang.richting;
-      predicates++;
-    }
-    if (ingang.vanRij !== undefined) {
-      matches = matches && stoel.rij >= ingang.vanRij;
-      predicates++;
-    }
-    if (ingang.totRij !== undefined) {
-      matches = matches && stoel.rij < ingang.totRij;
-      predicates++;
-    }
-    if (ingang.vanKolom !== undefined) {
-      matches = matches && stoel.kolom >= ingang.vanKolom;
-      predicates++;
-    }
-    if (ingang.totKolom !== undefined) {
-      matches = matches && stoel.kolom < ingang.totKolom;
-      predicates++;
-    }
-    return predicates > 0 && matches;
-  });
+  const ingang = gebouw.ingangen.reduce((previous, current) => gewicht(stoel, previous) < gewicht(stoel, current) ? current : previous);
   return ingang ? ingang.naam : 'onbekend';
 }

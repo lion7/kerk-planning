@@ -154,10 +154,12 @@ function uitnodigen(planning: Planning): number {
     file.setTrashed(true);
   }
   const spreadsheet = SpreadsheetApp.create(filename);
+  spreadsheet.appendRow([`Genodigden ${planning.dienst} op ${planning.datum}`]);
+  spreadsheet.getRange("A1:D1").merge();
   spreadsheet.appendRow(['Ingang', 'Naam', 'Aantal', 'Email']);
   planning.genodigden.forEach(genodigde => spreadsheet.appendRow([genodigde.ingang, genodigde.naam, genodigde.aantal, genodigde.email]));
-  spreadsheet.getRange('1:1').setBackground('#0000ff').setFontColor('#ffffff');
-  spreadsheet.setFrozenRows(1);
+  spreadsheet.getRange('1:2').setBackground('#0000ff').setFontColor('#ffffff');
+  spreadsheet.setFrozenRows(2);
   spreadsheet.sort(1);
   spreadsheet.getActiveSheet().autoResizeColumns(1, spreadsheet.getLastColumn());
 

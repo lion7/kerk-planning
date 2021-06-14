@@ -398,7 +398,7 @@ export class KerkPlanning extends LitElement {
     event.preventDefault();
     const rows = this.genodigden.sort((a, b) => a.ingang.localeCompare(b.ingang))
       .map(value => [value.ingang, value.naam, value.aantal, value.email]);
-    const csvContent = "gebouw;ingang;naam;aantal personen;email\n" + rows.map(e => e.join(";")).join("\n");
+    const csvContent = `Genodigden ${this.dienst} op ${this.datum}\nIngang;Naam;Aantal;Email\n` + rows.map(e => e.join(";")).join("\n");
     const link = document.createElement("a");
     link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURI(csvContent));
     link.setAttribute('download', `genodigden ${this.datum} ${this.dienst}.csv`);
@@ -577,10 +577,7 @@ export class KerkPlanning extends LitElement {
 
   private huidigGebouw(): Gebouw | undefined {
     const dienst = this.dienst.toLowerCase();
-    return this.gebouwen.find(gebouw => {
-      const gebouwNaam = gebouw.naam.includes('(') ? gebouw.naam.substring(0, gebouw.naam.indexOf('(')).trim() : gebouw.naam;
-      return dienst.includes(gebouwNaam.toLowerCase());
-    });
+    return this.gebouwen.find(gebouw => dienst.includes(gebouw.naam.toLowerCase()));
   }
 
   private bepaalStarttijd(): string {
