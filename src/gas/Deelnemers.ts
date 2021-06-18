@@ -5,10 +5,12 @@ function createDeelnemer(row: any[], headerRow: string[]): Deelnemer {
   for (let i = 7; i < row.length; i++) {
     const dienst = headerRow[i];
     const aantal = parseInt(row[i]);
-    opgaven.push({
-      dienst: dienst,
-      aantal: aantal
-    });
+    if (dienst && aantal && !isNaN(aantal)) {
+      opgaven.push({
+        dienst: dienst,
+        aantal: aantal
+      });
+    }
   }
   return {
     email: row[1].toLowerCase(),

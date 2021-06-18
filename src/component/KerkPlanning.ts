@@ -414,7 +414,7 @@ export class KerkPlanning extends LitElement {
         const diensten: string[] = [];
         deelnemers.forEach(deelnemer =>
           deelnemer.opgaven.forEach(opgave => {
-            if (!diensten.includes(opgave.dienst)) diensten.push(opgave.dienst);
+            if (opgave && !diensten.includes(opgave.dienst)) diensten.push(opgave.dienst);
           }));
         this.deelnemers = deelnemers;
         this.diensten = diensten;
@@ -544,7 +544,7 @@ export class KerkPlanning extends LitElement {
   }
 
   private findOpgave(deelnemer: Deelnemer): Opgave | undefined {
-    return deelnemer.opgaven.find(value => value.aantal > 0 && value.dienst == this.dienst);
+    return deelnemer.opgaven.find(value => value && value.aantal > 0 && value.dienst == this.dienst);
   }
 
   private isGenodigde(deelnemer: Deelnemer): boolean {
