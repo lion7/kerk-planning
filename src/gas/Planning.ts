@@ -61,7 +61,7 @@ kunnen wij u hierbij meedelen dat u ${huisgenotenTekst}
 bent ingedeeld om op D.V. ${datum} de ${dienst} bij te wonen.
 
 U wordt hartelijk uitgenodigd voor deze dienst.
-• U wordt verwacht bij de ingang ${genodigde.ingang}.
+• U wordt verwacht bij de ingang ${genodigde.ingang.replace("galerij", "GALERIJ")}.
 • De deuren van de kerk gaan open om ${tijdstip} uur.
 • U wordt hier opgewacht door een uitgangshulp.
 • Uiteraard gelden de inmiddels bekende corona regels.
