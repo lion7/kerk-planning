@@ -2,6 +2,7 @@
   "name": "kerk-planning",
   "version": "0.0.0",
   "description": "Webcomponent kerk-planning following open-wc recommendations",
+  "repository": "https://github.com/lion7/kerk-planning.git",
   "author": "kerk-planning",
   "license": "MIT",
   "main": "index.js",

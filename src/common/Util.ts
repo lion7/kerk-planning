@@ -76,22 +76,15 @@ export function bepaalRichting(char: any): Richting | undefined {
 }
 
 export function isOnbeschikbaar(stoel: Stoel, stoelen: Stoel[]): boolean {
-  const richting = stoelen[0].richting;
+  const aantalTussenStoelen = 0;
   let totRij = stoelen.map(value => value.rij).reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
   let vanRij = stoelen.map(value => value.rij).reduce((previousValue, currentValue) => previousValue > currentValue ? currentValue : previousValue, totRij);
   let totKolom = stoelen.map(value => value.kolom).reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
   let vanKolom = stoelen.map(value => value.kolom).reduce((previousValue, currentValue) => previousValue > currentValue ? currentValue : previousValue, totKolom);
-  if (isHorizontaal(richting)) {
-    vanRij -= 2;
-    totRij += 2;
-    totKolom += 3;
-    vanKolom -= 3;
-  } else {
-    vanRij -= 3;
-    totRij += 3;
-    totKolom += 2;
-    vanKolom -= 2;
-  }
+  vanRij -= aantalTussenStoelen;
+  totRij += aantalTussenStoelen;
+  totKolom += aantalTussenStoelen;
+  vanKolom -= aantalTussenStoelen;
   return (stoel.rij >= vanRij && stoel.rij <= totRij) && (stoel.kolom >= vanKolom && stoel.kolom <= totKolom)
 }
 
