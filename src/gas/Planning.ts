@@ -124,12 +124,12 @@ function uitnodigen(planning: Planning): number {
   eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
 
   const reedsGenodigden = getReedsGenodigden(startTijd, eindTijd);
-  const nieuweGenodigden = planning.genodigden.filter(genodigde => !reedsGenodigden.includes(genodigde.email));
+  const nieuweGenodigden = planning.genodigden.filter(genodigde => genodigde && !reedsGenodigden.includes(genodigde.email));
 
   const calendar = CalendarApp.getDefaultCalendar();
   nieuweGenodigden.forEach(genodigde => {
     Logger.log(`${title} voor ${genodigde.naam} (${genodigde.aantal} personen) met email ${genodigde.email}`);
-    const description = ['michalnawrocki1992@gmail.com'].indexOf(genodigde.email) != -1 ?
+    const description = ['michalnawrocki1992@gmail.com'].includes(genodigde.email) ?
       createDescriptionEnglish(planning.dienst, openingsTijd, genodigde) :
       createDescriptionDutch(planning.dienst, openingsTijd, genodigde);
     const event = calendar.createEvent(title, startTijd, eindTijd, {
