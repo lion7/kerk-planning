@@ -9,12 +9,17 @@
     </script>
     <kerk-planning></kerk-planning>
     <script>
+        function onError(error) {
+          console.error(error);
+          window.alert(error);
+        }
+
         const kp = document.querySelector('kerk-planning');
-        kp.getDeelnemers = (handler) => { google.script.run.withSuccessHandler(handler).getDeelnemers(); };
-        kp.getGebouwen = (handler) => { google.script.run.withSuccessHandler(handler).getGebouwen(); };
-        kp.getPlanning = (datum, dienst, handler) => { google.script.run.withSuccessHandler(handler).getPlanning(datum, dienst); };
-        kp.opslaan = (planning, handler) => { google.script.run.withSuccessHandler(handler).opslaan(planning); };
-        kp.uitnodigen = (planning, handler) => { google.script.run.withSuccessHandler(handler).uitnodigen(planning); };
+        kp.getDeelnemers = (handler) => { google.script.run.withSuccessHandler(handler).withFailureHandler(onError).getDeelnemers(); };
+        kp.getGebouwen = (handler) => { google.script.run.withSuccessHandler(handler).withFailureHandler(onError).getGebouwen(); };
+        kp.getPlanning = (datum, dienst, handler) => { google.script.run.withSuccessHandler(handler).withFailureHandler(onError).getPlanning(datum, dienst); };
+        kp.opslaan = (planning, handler) => { google.script.run.withSuccessHandler(handler).withFailureHandler(onError).opslaan(planning); };
+        kp.uitnodigen = (planning, handler) => { google.script.run.withSuccessHandler(handler).withFailureHandler(onError).uitnodigen(planning); };
     </script>
   </body>
 </html>

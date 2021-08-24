@@ -1,4 +1,4 @@
-import {Genodigde, Planning} from "../common/Model";
+import {Planning} from "../common/Model";
 
 function getPlanning(datum: string, dienst: string): Planning | undefined {
   const filename = `planning ${datum} ${dienst}.json`
@@ -38,30 +38,18 @@ function getReedsGenodigden(startTijd: Date, eindTijd: Date): string[] {
   return result;
 }
 
-function createDescriptionDutch(dienst: string, openingsTijd: Date, genodigde: Genodigde): string {
+function createDescriptionDutch(dienst: string, openingsTijd: Date, ingang: string): string {
   const datum = openingsTijd.toLocaleString('nl', {day: 'numeric', month: 'long', year: 'numeric'});
   const tijdstip = openingsTijd.toLocaleString('nl', {hour: 'numeric', minute: 'numeric'});
-  let huisgenotenTekst = '';
-  switch (genodigde.aantal) {
-    case 1:
-      huisgenotenTekst = ``;
-      break;
-    case 2:
-      huisgenotenTekst = `samen met uw huisgenoot`;
-      break;
-    default:
-      huisgenotenTekst = `samen met uw ${genodigde.aantal - 1} huisgenoten`;
-      break;
-  }
 
-  return `Geachte ${genodigde.naam},
+  return `Geachte gemeentelid,
 
 Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen,
-kunnen wij u hierbij meedelen dat u ${huisgenotenTekst}
+kunnen wij u hierbij meedelen dat u (en uw huisgenoten)
 bent ingedeeld om op D.V. ${datum} de ${dienst} bij te wonen.
 
 U wordt hartelijk uitgenodigd voor deze dienst.
-• U wordt verwacht bij de ingang ${genodigde.ingang.replace("galerij", "GALERIJ")}.
+• U wordt verwacht bij de ingang ${ingang.replace("galerij", "GALERIJ")}.
 • De deuren van de kerk gaan open om ${tijdstip} uur.
 • U wordt hier opgewacht door een uitgangshulp.
 • Uiteraard gelden de inmiddels bekende corona regels.
@@ -77,30 +65,18 @@ Wij wensen u van harte Gods zegen toe onder de bediening van het Woord,
 Kerkenraden Hervormde Gemeente Genemuiden`;
 }
 
-function createDescriptionEnglish(dienst: string, openingsTijd: Date, genodigde: Genodigde): string {
+function createDescriptionEnglish(dienst: string, openingsTijd: Date, ingang: string): string {
   const datum = openingsTijd.toLocaleString('en', {day: 'numeric', month: 'long', year: 'numeric'});
   const tijdstip = openingsTijd.toLocaleString('en', {hour: 'numeric', minute: 'numeric'});
-  let huisgenotenTekst = '';
-  switch (genodigde.aantal) {
-    case 1:
-      huisgenotenTekst = ``;
-      break;
-    case 2:
-      huisgenotenTekst = `with your housemate`;
-      break;
-    default:
-      huisgenotenTekst = `with your ${genodigde.aantal - 1} housemates`;
-      break;
-  }
 
-  return `Dear ${genodigde.naam},
+  return `L.S.,
 
 Following your registration to attend a church service,
-we hereby inform you that you ${huisgenotenTekst}
+we hereby inform you that you (and your housemates)
 are scheduled to attend the ${dienst} on ${datum}.
 
 You are cordially invited to this service.
-• You are expected at the entrance ${genodigde.ingang}.
+• You are expected at the entrance ${ingang}.
 • The doors of the church will open at ${tijdstip}
 • You will be met here by an attendant.
 • Of course, the usual corona measures apply.
@@ -116,35 +92,6 @@ Hervormde Gemeente Genemuiden`;
 }
 
 function uitnodigen(planning: Planning): number {
-  const title = `Uitnodiging ${planning.dienst}`;
-  const startTijd = new Date(`${planning.datum}T${planning.tijd}`);
-  const openingsTijd = new Date(startTijd);
-  const eindTijd = new Date(startTijd);
-  openingsTijd.setTime(startTijd.getTime() - 20 * 60 * 1000);
-  eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
-
-  const reedsGenodigden = getReedsGenodigden(startTijd, eindTijd);
-  const nieuweGenodigden = planning.genodigden.filter(genodigde => genodigde && !reedsGenodigden.includes(genodigde.email));
-
-  const calendar = CalendarApp.getDefaultCalendar();
-  nieuweGenodigden.forEach(genodigde => {
-    Logger.log(`${title} voor ${genodigde.naam} (${genodigde.aantal} personen) met email ${genodigde.email}`);
-    const description = ['michalnawrocki1992@gmail.com'].includes(genodigde.email) ?
-      createDescriptionEnglish(planning.dienst, openingsTijd, genodigde) :
-      createDescriptionDutch(planning.dienst, openingsTijd, genodigde);
-    const event = calendar.createEvent(title, startTijd, eindTijd, {
-      description: description,
-      guests: genodigde.email,
-      sendInvites: true
-    });
-    event.setGuestsCanModify(false);
-    event.setGuestsCanSeeGuests(false);
-    event.setGuestsCanInviteOthers(false);
-    event.setTag('Naam', genodigde.naam)
-    event.setTag('Aantal', genodigde.aantal.toString())
-    event.setTag('Ingang', genodigde.ingang)
-  });
-
   opslaan(planning);
 
   const filename = `genodigden ${planning.datum} ${planning.dienst}`
@@ -162,6 +109,50 @@ function uitnodigen(planning: Planning): number {
   spreadsheet.setFrozenRows(2);
   spreadsheet.sort(1);
   spreadsheet.getActiveSheet().autoResizeColumns(1, spreadsheet.getLastColumn());
+
+  const title = `Uitnodiging ${planning.dienst}`;
+  const startTijd = new Date(`${planning.datum}T${planning.tijd}`);
+  const openingsTijd = new Date(startTijd);
+  const eindTijd = new Date(startTijd);
+  openingsTijd.setTime(startTijd.getTime() - 20 * 60 * 1000);
+  eindTijd.setTime(startTijd.getTime() + 90 * 60 * 1000);
+
+  const reedsGenodigden = getReedsGenodigden(startTijd, eindTijd);
+  const nieuweGenodigden = planning.genodigden.filter(genodigde => genodigde && !reedsGenodigden.includes(genodigde.email));
+  const ingangen = nieuweGenodigden.map(genodigde => genodigde.ingang).filter((value, index, array) => array.indexOf(value) === index);
+  const engelseUitnodigingen = ['michalnawrocki1992@gmail.com'];
+
+  const calendar = CalendarApp.getDefaultCalendar();
+  ingangen.forEach(ingang => {
+    const nieuweGenodigdenVoorIngang = nieuweGenodigden.filter(genodigde => !engelseUitnodigingen.includes(genodigde.email) && genodigde.ingang === ingang).map(genodigde => genodigde.email);
+    if (nieuweGenodigdenVoorIngang.length > 0) {
+      Logger.log(`${title} voor ${nieuweGenodigdenVoorIngang.length} genodigden met ingang ${ingang} en emails ${nieuweGenodigdenVoorIngang}`);
+      const event = calendar.createEvent(title, startTijd, eindTijd, {
+        description: createDescriptionDutch(planning.dienst, openingsTijd, ingang),
+        guests: nieuweGenodigdenVoorIngang.toString(),
+        sendInvites: true
+      });
+      event.setGuestsCanModify(false);
+      event.setGuestsCanSeeGuests(false);
+      event.setGuestsCanInviteOthers(false);
+      event.setTag('Ingang', ingang);
+    }
+  });
+
+  nieuweGenodigden.filter(genodigde => engelseUitnodigingen.includes(genodigde.email)).forEach(genodigde => {
+    Logger.log(`${title} voor ${genodigde.naam} (${genodigde.aantal} personen) met email ${genodigde.email}`);
+    const event = calendar.createEvent(title, startTijd, eindTijd, {
+      description: createDescriptionEnglish(planning.dienst, openingsTijd, genodigde.ingang),
+      guests: genodigde.email,
+      sendInvites: true
+    });
+    event.setGuestsCanModify(false);
+    event.setGuestsCanSeeGuests(false);
+    event.setGuestsCanInviteOthers(false);
+    event.setTag('Naam', genodigde.naam);
+    event.setTag('Aantal', genodigde.aantal.toString());
+    event.setTag('Ingang', genodigde.ingang);
+  });
 
   return nieuweGenodigden.length;
 }
