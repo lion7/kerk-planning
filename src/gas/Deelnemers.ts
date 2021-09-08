@@ -47,8 +47,7 @@ function getDeelnemers(): Deelnemer[] {
       .getDataRange()
       .getValues()
       .forEach(value => {
-        const datumTijd = value[0] as string;
-        const datum = datumTijd.substring(0, datumTijd.indexOf('T'));
+        const datum = value[0] as string;
         const dienst = value[1] as string;
         const email = value[2] as string;
         const status = value[3] as string;

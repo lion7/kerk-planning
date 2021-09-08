@@ -137,8 +137,7 @@ function verstuurUitnodiging(genodigde: Genodigde, datum: string, dienst: string
 function verwerkVerwijderdeGenodigden(datum: string, dienst: string, verwijderdeGenodigden: string[], spreadsheet: Spreadsheet) {
   const range = spreadsheet.getDataRange();
   range.getValues().forEach((value, index) => {
-    const datumTijd = value[0] as string;
-    const datumValue = datumTijd.substring(0, datumTijd.indexOf('T'));
+    const datumValue = value[0] as string;
     const dienstValue = value[1] as string;
     const email = value[2] as string;
     if (datumValue == datum && dienstValue == dienst && verwijderdeGenodigden.includes(email)) {
