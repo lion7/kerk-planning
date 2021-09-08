@@ -1,7 +1,5 @@
 import { Genodigde, Planning } from '../common/Model';
-import EventAttendee = GoogleAppsScript.Calendar.Schema.EventAttendee;
 import Spreadsheet = GoogleAppsScript.Spreadsheet.Spreadsheet;
-import Direction = GoogleAppsScript.Spreadsheet.Direction;
 
 function createDescriptionDutch(dienst: string, openingsTijd: Date, genodigde: Genodigde): string {
   const datum = openingsTijd.toLocaleString('nl', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -19,7 +17,7 @@ function createDescriptionDutch(dienst: string, openingsTijd: Date, genodigde: G
       break;
   }
 
-  return `Geachte gemeentelid,
+  return `Geachte ${genodigde.naam},
 
 Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen,
 kunnen wij u hierbij meedelen dat u ${huisgenotenTekst}
@@ -57,7 +55,7 @@ function createDescriptionEnglish(dienst: string, openingsTijd: Date, genodigde:
       break;
   }
 
-  return `L.S.,
+  return `Dear ${genodigde.naam},
 
 Following your registration to attend a church service,
 we hereby inform you that you ${huisgenotenTekst}
@@ -123,37 +121,6 @@ function maakGenodigdenSpreadsheet(planning: Planning) {
   spreadsheet.getActiveSheet().autoResizeColumns(1, spreadsheet.getLastColumn());
 }
 
-function verstuurUitnodigingOld(genodigde: Genodigde, dienst: string, startTijd: Date, openingsTijd: Date, eindTijd: Date) {
-  const engelsen = ['michalnawrocki1992@gmail.com'];
-  const title = `Uitnodiging ${dienst}`;
-  const description = engelsen.includes(genodigde.email) ? createDescriptionEnglish(dienst, openingsTijd, genodigde) : createDescriptionDutch(dienst, openingsTijd, genodigde);
-  const attendee: EventAttendee = {
-    displayName: genodigde.naam,
-    email: genodigde.email,
-    additionalGuests: genodigde.aantal - 1,
-  };
-  Calendar.Events?.insert(
-    {
-      summary: title,
-      description: description,
-      start: {
-        dateTime: startTijd.toISOString(),
-      },
-      end: {
-        dateTime: eindTijd.toISOString(),
-      },
-      attendees: [attendee],
-      guestsCanModify: false,
-      guestsCanInviteOthers: false,
-      guestsCanSeeOtherGuests: false,
-    },
-    'primary',
-    {
-      sendUpdates: 'all',
-    }
-  );
-}
-
 function verstuurUitnodiging(genodigde: Genodigde, datum: string, dienst: string, openingsTijd: Date, spreadsheet: Spreadsheet) {
   const engelsen = ['michalnawrocki1992@gmail.com'];
   const title = `Uitnodiging ${dienst}`;
@@ -207,9 +174,7 @@ function uitnodigen(planning: Planning): number {
   maakGenodigdenSpreadsheet(planning);
   planning.genodigden
     .filter(genodigde => toegevoegdeGenodigden.includes(genodigde.email))
-    .forEach(genodigde => {
-      verstuurUitnodiging(genodigde, planning.datum, planning.dienst, openingsTijd, spreadsheet);
-    });
+    .forEach(genodigde => verstuurUitnodiging(genodigde, planning.datum, planning.dienst, openingsTijd, spreadsheet));
   verwerkVerwijderdeGenodigden(planning.datum, planning.dienst, verwijderdeGenodigden, spreadsheet);
 
   return toegevoegdeGenodigden.length;

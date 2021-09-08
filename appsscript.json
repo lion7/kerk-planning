@@ -1,12 +1,6 @@
 {
   "timeZone": "Europe/Amsterdam",
-  "dependencies": {
-    "enabledAdvancedServices": [{
-      "serviceId": "calendar",
-      "userSymbol": "Calendar",
-      "version": "v3"
-    }]
-  },
+  "dependencies": {},
   "webapp": {
     "access": "ANYONE",
     "executeAs": "USER_ACCESSING"
