@@ -77,7 +77,7 @@ We sincerely wish you God's blessing under the ministry of the Word,
 Hervormde Gemeente Genemuiden`;
 }
 
-function ophalen(datum: string, dienst: string): Planning | undefined {
+function getPlanning(datum: string, dienst: string): Planning | undefined {
   const filename = `planning ${datum} ${dienst}.json`;
   const iterator = DriveApp.getFilesByName(filename);
   if (iterator.hasNext()) {
@@ -137,17 +137,18 @@ function verstuurUitnodiging(genodigde: Genodigde, datum: string, dienst: string
 function verwerkVerwijderdeGenodigden(datum: string, dienst: string, verwijderdeGenodigden: string[], spreadsheet: Spreadsheet) {
   const range = spreadsheet.getDataRange();
   range.getValues().forEach((value, index) => {
-    const datumValue = value[0] as string;
+    const datumValue = value[0];
+    const datumString = datumValue instanceof Date ? datumValue.toISOString().substring(0, 10) : datumValue.toString();
     const dienstValue = value[1] as string;
     const email = value[2] as string;
-    if (datumValue == datum && dienstValue == dienst && verwijderdeGenodigden.includes(email)) {
+    if (datumString == datum && dienstValue == dienst && verwijderdeGenodigden.includes(email)) {
       range.getCell(index, 3).setValue('NO');
     }
   });
 }
 
 function uitnodigen(planning: Planning): number {
-  const oudePlanning = ophalen(planning.datum, planning.dienst);
+  const oudePlanning = getPlanning(planning.datum, planning.dienst);
   const startTijd = new Date(`${planning.datum}T${planning.tijd}`);
   const openingsTijd = new Date(startTijd);
   const eindTijd = new Date(startTijd);

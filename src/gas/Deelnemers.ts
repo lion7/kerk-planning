@@ -1,4 +1,5 @@
 import { Deelnemer, Opgave } from '../common/Model';
+import Date = GoogleAppsScript.Base.Date;
 
 function createDeelnemer(row: any[], headerRow: string[]): Deelnemer {
   const opgaven: Opgave[] = [];
@@ -34,7 +35,8 @@ function uitnodigingenAanvullen(deelnemers: Deelnemer[]) {
       .getDataRange()
       .getValues()
       .forEach(value => {
-        const datum = value[0] as string;
+        const datumValue = value[0];
+        const datum = datumValue instanceof Date ? datumValue.toISOString().substring(0, 10) : datumValue.toString();
         const dienst = value[1] as string;
         const email = value[2] as string;
         const status = value[3] as string;
