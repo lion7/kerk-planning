@@ -24,20 +24,7 @@ function createDeelnemer(row: any[], headerRow: string[]): Deelnemer {
   };
 }
 
-function getDeelnemers(): Deelnemer[] {
-  const sheet = SpreadsheetApp.getActiveSheet();
-  const deelnemers = sheet.getDataRange().getValues();
-  const headerRow = deelnemers[0];
-  const rows: Deelnemer[] = [];
-  for (let i = 1; i < deelnemers.length; i++) {
-    if (deelnemers[i][0] == '') {
-      continue;
-    }
-    rows.push(createDeelnemer(deelnemers[i], headerRow));
-  }
-  // reverse the array so the last entry of duplicates is always used
-  const result = rows.reverse();
-
+function uitnodigingenAanvullen(deelnemers: Deelnemer[]) {
   const filename = `Genodigden`;
   const iterator = DriveApp.getFilesByName(filename);
   if (iterator.hasNext()) {
@@ -51,7 +38,7 @@ function getDeelnemers(): Deelnemer[] {
         const dienst = value[1] as string;
         const email = value[2] as string;
         const status = value[3] as string;
-        const deelnemer = result.find(value => value.email === email);
+        const deelnemer = deelnemers.find(deelnemer => deelnemer.email === email);
         if (deelnemer) {
           deelnemer.uitnodigingen.push({
             datum: datum,
@@ -61,6 +48,21 @@ function getDeelnemers(): Deelnemer[] {
         }
       });
   }
+}
 
-  return result;
+function getDeelnemers(): Deelnemer[] {
+  const sheet = SpreadsheetApp.getActiveSheet();
+  const rows = sheet.getDataRange().getValues();
+  const headerRow = rows[0];
+  let deelnemers: Deelnemer[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] == '') {
+      continue;
+    }
+    deelnemers.push(createDeelnemer(rows[i], headerRow));
+  }
+  // only keep the last entry of duplicates
+  deelnemers = deelnemers.filter((deelnemer, index, array) => array.lastIndexOf(deelnemer) === index);
+  uitnodigingenAanvullen(deelnemers);
+  return deelnemers;
 }
