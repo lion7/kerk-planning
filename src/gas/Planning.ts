@@ -7,33 +7,28 @@ function createDescriptionDutch(dienst: string, openingsTijd: Date, genodigde: G
   let huisgenotenTekst = '';
   switch (genodigde.aantal) {
     case 1:
-      huisgenotenTekst = ``;
+      huisgenotenTekst = `u`;
       break;
     case 2:
-      huisgenotenTekst = `samen met uw huisgenoot`;
+      huisgenotenTekst = `u samen met uw huisgenoot`;
       break;
     default:
-      huisgenotenTekst = `samen met uw ${genodigde.aantal - 1} huisgenoten`;
+      huisgenotenTekst = `u samen met uw ${genodigde.aantal - 1} huisgenoten`;
       break;
   }
 
   return `Geachte ${genodigde.naam},
 
-Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen,
-kunnen wij u hierbij meedelen dat u ${huisgenotenTekst}
-bent ingedeeld om op D.V. ${datum} de ${dienst} bij te wonen.
+Naar aanleiding van uw aanmelding om een kerkdienst bij te wonen, kunnen wij u hierbij meedelen dat ${huisgenotenTekst} bent ingedeeld om op D.V. ${datum} de ${dienst} bij te wonen.
 
 U wordt hartelijk uitgenodigd voor deze dienst.
 • U wordt verwacht bij de ingang ${genodigde.ingang.replace('galerij', 'GALERIJ')}.
 • De deuren van de kerk gaan open om ${tijdstip} uur.
 • U wordt hier opgewacht door een uitgangshulp.
 • Uiteraard gelden de inmiddels bekende corona regels.
-• Bij het uitgaan van de dienst wordt u verzocht om voldoende afstand van de andere
-  kerkgangers te bewaren, ook bij de collectebussen. Op aanwijzing van de uitgangshulp
-  verlaat u het gebouw door dezelfde deur als waar u naar binnen bent gekomen.
+• Bij het uitgaan van de dienst wordt u verzocht om voldoende afstand van de andere kerkgangers te bewaren, ook bij de collectebussen. Op aanwijzing van de uitgangshulp verlaat u het gebouw door dezelfde deur als waar u naar binnen bent gekomen.
 
-Mocht u verhinderd zijn, dan verzoeken wij u vriendelijk om op deze e-mail te reageren.
-Wij zullen dan iemand anders proberen uit te nodigen.
+Mocht u verhinderd zijn, dan verzoeken wij u vriendelijk om op deze e-mail te reageren. Wij zullen dan iemand anders proberen uit te nodigen.
 
 Wij wensen u van harte Gods zegen toe onder de bediening van het Woord,
 Kerkenraden Hervormde Gemeente Genemuiden`;
@@ -45,33 +40,28 @@ function createDescriptionEnglish(dienst: string, openingsTijd: Date, genodigde:
   let huisgenotenTekst = '';
   switch (genodigde.aantal) {
     case 1:
-      huisgenotenTekst = ``;
+      huisgenotenTekst = `you`;
       break;
     case 2:
-      huisgenotenTekst = `with your housemate`;
+      huisgenotenTekst = `you with your housemate`;
       break;
     default:
-      huisgenotenTekst = `with your ${genodigde.aantal - 1} housemates`;
+      huisgenotenTekst = `you with your ${genodigde.aantal - 1} housemates`;
       break;
   }
 
   return `Dear ${genodigde.naam},
 
-Following your registration to attend a church service,
-we hereby inform you that you ${huisgenotenTekst}
-are scheduled to attend the ${dienst} on ${datum}.
+Following your registration to attend a church service, we hereby inform you that ${huisgenotenTekst} are scheduled to attend the ${dienst} on ${datum}.
 
 You are cordially invited to this service.
 • You are expected at the entrance ${genodigde.ingang}.
 • The doors of the church will open at ${tijdstip}
 • You will be met here by an attendant.
 • Of course, the usual corona measures apply.
-• When leaving the service, you are asked to leave enough distance from the other persons attending,
-  especially at the collection boxes. You will leave the on the instructions of the attendant,
-  through the same door you entered.
+• When leaving the service, you are asked to leave enough distance from the other persons attending, especially at the collection boxes. You will leave the on the instructions of the attendant, through the same door you entered.
 
-If you are unable to attend, we kindly request you to respond to this e-mail.
-We will then try to invite someone else.
+If you are unable to attend, we kindly request you to respond to this e-mail. We will then try to invite someone else.
 
 We sincerely wish you God's blessing under the ministry of the Word,
 Hervormde Gemeente Genemuiden`;
@@ -81,13 +71,9 @@ function getPlanning(datum: string, dienst: string): Planning | undefined {
   const filename = `planning ${datum} ${dienst}.json`;
   const iterator = DriveApp.getFilesByName(filename);
   if (iterator.hasNext()) {
-    try {
-      const file = iterator.next();
-      const json = file.getBlob().getDataAsString();
-      return JSON.parse(json);
-    } catch (e) {
-      Logger.log(e);
-    }
+    const file = iterator.next();
+    const json = file.getBlob().getDataAsString();
+    return JSON.parse(json);
   }
   return undefined;
 }
@@ -141,13 +127,19 @@ function verwerkVerwijderdeGenodigden(datum: string, dienst: string, verwijderde
     const datumString = datumValue instanceof Date ? datumValue.toISOString().substring(0, 10) : datumValue.toString();
     const dienstValue = value[1] as string;
     const email = value[2] as string;
+    if (verwijderdeGenodigden.includes(email)) {
+      console.log(`Checking row ${index} with ${datumString} ${dienstValue} ${email} against ${datum} ${dienst}`);
+    }
     if (datumString == datum && dienstValue == dienst && verwijderdeGenodigden.includes(email)) {
-      range.getCell(index, 3).setValue('NO');
+      console.log(`Marking row ${index} (${email}) as 'NO'`);
+      range.getCell(index + 1, 3).setValue('NO');
     }
   });
 }
 
 function uitnodigen(planning: Planning): number {
+  console.log(`Uitnodigingen versturen voor ${planning.datum} ${planning.dienst}`);
+
   const oudePlanning = getPlanning(planning.datum, planning.dienst);
   const startTijd = new Date(`${planning.datum}T${planning.tijd}`);
   const openingsTijd = new Date(startTijd);
@@ -165,10 +157,13 @@ function uitnodigen(planning: Planning): number {
     spreadsheet = SpreadsheetApp.create(filename);
   }
 
-  const reedsGenodigden = oudePlanning ? oudePlanning.genodigden.map(genodigde => genodigde.email) : [];
-  const nieuwGenodigden = planning.genodigden.map(genodigde => genodigde.email);
+  const reedsGenodigden = oudePlanning ? oudePlanning.genodigden.filter(genodigde => genodigde?.email).map(genodigde => genodigde.email) : [];
+  const nieuwGenodigden = planning.genodigden.filter(genodigde => genodigde?.email).map(genodigde => genodigde.email);
   const verwijderdeGenodigden = reedsGenodigden.filter(email => !nieuwGenodigden.includes(email));
   const toegevoegdeGenodigden = nieuwGenodigden.filter(email => !reedsGenodigden.includes(email));
+
+  console.log(`Verwijderde genodigden: ${verwijderdeGenodigden}`);
+  console.log(`Toegevoegde genodigden: ${toegevoegdeGenodigden}`);
 
   opslaan(planning);
   maakGenodigdenSpreadsheet(planning);
