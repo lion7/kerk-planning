@@ -1,5 +1,5 @@
-import {css, html, LitElement, property, PropertyValues} from 'lit-element';
-import {Beschikbaarheid, Deelnemer, Gebouw, Genodigde, Opgave, Planning, Stoel, Uitnodiging} from "../common/Model";
+import { css, html, LitElement, property, PropertyValues } from 'lit-element';
+import { Beschikbaarheid, Deelnemer, Gebouw, Genodigde, Opgave, Planning, Stoel, Uitnodiging } from '../common/Model';
 import '@webcomponents/webcomponentsjs/webcomponents-loader';
 import '@material/mwc-icon';
 import '@material/mwc-button';
@@ -10,7 +10,7 @@ import '@material/mwc-select';
 import '@material/mwc-top-app-bar-fixed';
 import '@vaadin/vaadin-date-picker';
 import '@vaadin/vaadin-time-picker';
-import {bepaalIngang, isHorizontaal, isOnbeschikbaar, isTussenBiddagEnDankdag, isTussenDankdagEnBiddag, toCssRotation, volgendeZondag} from "../common/Util";
+import { bepaalIngang, isHorizontaal, isOnbeschikbaar, isTussenBiddagEnDankdag, isTussenDankdagEnBiddag, toCssRotation, volgendeZondag } from '../common/Util';
 
 export class KerkPlanning extends LitElement {
   static styles = css`
@@ -52,7 +52,7 @@ export class KerkPlanning extends LitElement {
     #gebouw {
       height: min-content;
       width: min-content;
-      background-color: #836B32;
+      background-color: #836b32;
     }
 
     .inverted {
@@ -70,7 +70,7 @@ export class KerkPlanning extends LitElement {
     }
 
     .loading {
-      background: rgba(0,0,0,.5);
+      background: rgba(0, 0, 0, 0.5);
       width: 100%;
       height: 100%;
       position: fixed;
@@ -80,48 +80,63 @@ export class KerkPlanning extends LitElement {
     }
   `;
 
-  @property({type: []}) private diensten: string[] = [];
-  @property({type: []}) private deelnemers: Deelnemer[] = [];
-  @property({type: []}) private gebouwen: Gebouw[] = [];
-  @property({type: []}) private genodigden: Genodigde[] = [];
-  @property({type: Number}) private loading = 0;
-  @property({type: String}) private datum = volgendeZondag();
-  @property({type: String}) private tijd = "09:30";
-  @property({type: String}) private dienst = 'kerkdienst';
+  @property({ type: [] }) private diensten: string[] = [];
+  @property({ type: [] }) private deelnemers: Deelnemer[] = [];
+  @property({ type: [] }) private gebouwen: Gebouw[] = [];
+  @property({ type: [] }) private genodigden: Genodigde[] = [];
+  @property({ type: Number }) private loading = 0;
+  @property({ type: String }) private datum = volgendeZondag();
+  @property({ type: String }) private tijd = '09:30';
+  @property({ type: String }) private dienst = 'kerkdienst';
 
-  @property({type: Function}) getDeelnemers: (handler: (deelnemers: Deelnemer[] | undefined) => void) => void = (handler) => {
+  @property({ type: Function }) getDeelnemers: (handler: (deelnemers: Deelnemer[] | undefined) => void) => void = handler => {
     const filename = 'deelnemers.json';
     console.log(`Ophalen van ${filename}`);
-    fetch(filename).then(value => value.status == 200 ? value.json() : undefined).then(value => handler(value), reason => {
-      console.log(reason);
-      handler(undefined);
-    });
+    fetch(filename)
+      .then(value => (value.status == 200 ? value.json() : undefined))
+      .then(
+        value => handler(value),
+        reason => {
+          console.log(reason);
+          handler(undefined);
+        }
+      );
   };
 
-  @property({type: Function}) getGebouwen: (handler: (deelnemers: Gebouw[] | undefined) => void) => void = (handler) => {
+  @property({ type: Function }) getGebouwen: (handler: (deelnemers: Gebouw[] | undefined) => void) => void = handler => {
     const filename = 'gebouwen.json';
     console.log(`Ophalen van ${filename}`);
-    fetch(filename).then(value => value.status == 200 ? value.json() : undefined).then(value => handler(value), reason => {
-      console.log(reason);
-      handler(undefined);
-    });
+    fetch(filename)
+      .then(value => (value.status == 200 ? value.json() : undefined))
+      .then(
+        value => handler(value),
+        reason => {
+          console.log(reason);
+          handler(undefined);
+        }
+      );
   };
 
-  @property({type: Function}) getPlanning: (datum: string, dienst: string, handler: (planning: Planning | undefined) => void) => void = (datum, dienst, handler) => {
+  @property({ type: Function }) getPlanning: (datum: string, dienst: string, handler: (planning: Planning | undefined) => void) => void = (datum, dienst, handler) => {
     const filename = `planning ${datum} ${dienst}.json`;
     console.log(`Ophalen van ${filename}`);
-    fetch(filename).then(value => value.status == 200 ? value.json() : undefined).then(value => handler(value), reason => {
-      console.log(reason);
-      handler(undefined);
-    });
+    fetch(filename)
+      .then(value => (value.status == 200 ? value.json() : undefined))
+      .then(
+        value => handler(value),
+        reason => {
+          console.log(reason);
+          handler(undefined);
+        }
+      );
   };
 
-  @property({type: Function}) opslaan: (planning: Planning, handler: () => void) => void = (planning, handler) => {
+  @property({ type: Function }) opslaan: (planning: Planning, handler: () => void) => void = (planning, handler) => {
     console.log(JSON.stringify(planning));
     setTimeout(() => handler(), 1000);
   };
 
-  @property({type: Function}) uitnodigen: (planning: Planning, handler: (aantalGenodigden: number) => void) => void = (planning, handler) => {
+  @property({ type: Function }) uitnodigen: (planning: Planning, handler: (aantalGenodigden: number) => void) => void = (planning, handler) => {
     console.log(JSON.stringify(planning));
     setTimeout(() => handler(this.genodigden.length), 1000);
   };
@@ -138,46 +153,46 @@ export class KerkPlanning extends LitElement {
         <div>
           <div id="view">
             <mwc-select label="Dienst" slot="actionItems" value="${this.dienst}" @selected="${this._selecteerDienst}">
-              ${this.diensten.map(((value) => html`
-                <mwc-list-item value="${value}">${value}</mwc-list-item>
-              `))}
+              ${this.diensten.map(value => html` <mwc-list-item value="${value}">${value}</mwc-list-item> `)}
             </mwc-select>
             <div id="controls">
               <vaadin-date-picker value="${this.datum}" @value-changed="${this._selecteerDatum}"></vaadin-date-picker>
               <vaadin-time-picker value="${this.tijd}" step="1800" min="08:00" @value-changed="${this._selecteerTijd}"></vaadin-time-picker>
             </div>
-            ${this.renderDeelnemers()}
-            ${this.renderGebouw()}
-          </div> <!-- #planning -->
+            ${this.renderDeelnemers()} ${this.renderGebouw()}
+          </div>
+          <!-- #planning -->
           <div class="${this.loading > 0 ? 'loading' : ''}"></div>
-        </div> <!-- #top-app-bar-content -->
+        </div>
+        <!-- #top-app-bar-content -->
       </mwc-top-app-bar-fixed>
     `;
   }
 
   renderDeelnemers() {
     return html`
-      <mwc-list id="deelnemers"
-                ondragover="return false"
-                @drop="${this._reset}">
+      <mwc-list id="deelnemers" ondragover="return false" @drop="${this._reset}">
         ${this.deelnemers
           .sort((a, b) => this.compareDeelnemer(a, b))
-          .map(deelnemer => ({deelnemer: deelnemer, opgave: this.findOpgave(deelnemer)}))
+          .map(deelnemer => ({ deelnemer: deelnemer, opgave: this.findOpgave(deelnemer) }))
           .filter(value => !!value.opgave)
           .map(value => {
             const deelnemer = value.deelnemer;
             const opgave = value.opgave;
             const aantal = opgave ? opgave.aantal : '?';
             const laatsteUitnodigingen = []; //deelnemer.uitnodigingen;
-            const laatsteUitnodiging = this.laatsteUitnodiging(deelnemer);
+            const laatsteUitnodiging = this.laatsteUitnodiging(deelnemer, true);
             if (laatsteUitnodiging) laatsteUitnodigingen.push(laatsteUitnodiging);
-            const uitnodigingen = laatsteUitnodigingen.map(value => html`
-              <li>${new Date(value.datum).toLocaleString('nl', {
-                day: 'numeric',
-                month: 'numeric',
-                year: 'numeric'
-              })} - ${value.dienst} - ${value.status}
-              </li>`);
+            const uitnodigingen = laatsteUitnodigingen.map(
+              value => html` <li>
+                ${new Date(value.datum).toLocaleString('nl', {
+                  day: 'numeric',
+                  month: 'numeric',
+                  year: 'numeric',
+                })}
+                - ${value.dienst} - ${value.status}
+              </li>`
+            );
 
             let styling = '';
             if (this.isGenodigde(deelnemer)) {
@@ -190,27 +205,34 @@ export class KerkPlanning extends LitElement {
                 styling = 'background-color: orange';
               }
             }
-            return html`
-              <mwc-list-item twoline hasMeta graphic="avatar"
-                             data-deelnemer-email="${deelnemer.email}"
-                             style="height: min-content; ${styling}"
-                             draggable="true"
-                             @dragstart="${this._drag})">
-                <span>${deelnemer.naam}</span>
-                <span slot="secondary">${deelnemer.adres}, ${deelnemer.postcode} ${deelnemer.woonplaats}</span>
-                <span slot="secondary"><ul>${uitnodigingen}</ul></span>
-                <mwc-icon slot="meta">filter_${aantal}</mwc-icon>
-                <mwc-icon slot="graphic" class="inverted">${aantal > 1 ? 'people' : 'person'}</mwc-icon>
-              </mwc-list-item>`;
+            return html` <mwc-list-item
+              twoline
+              hasMeta
+              graphic="avatar"
+              data-deelnemer-email="${deelnemer.email}"
+              style="height: min-content; ${styling}"
+              draggable="true"
+              @dragstart="${this._drag})"
+            >
+              <span>${deelnemer.naam}</span>
+              <span slot="secondary">${deelnemer.adres}, ${deelnemer.postcode} ${deelnemer.woonplaats}</span>
+              <span slot="secondary"
+                ><ul>
+                  ${uitnodigingen}
+                </ul></span
+              >
+              <mwc-icon slot="meta">filter_${aantal}</mwc-icon>
+              <mwc-icon slot="graphic" class="inverted">${aantal > 1 ? 'people' : 'person'}</mwc-icon>
+            </mwc-list-item>`;
           })}
       </mwc-list>
     `;
   }
 
   renderGebouw() {
-    const gebouw = this.huidigGebouw()
+    const gebouw = this.huidigGebouw();
     if (!gebouw) {
-      console.log("Gebouw niet gevonden!");
+      console.log('Gebouw niet gevonden!');
       return;
     }
 
@@ -219,19 +241,20 @@ export class KerkPlanning extends LitElement {
     const beschikbareStoelen = gebouw.stoelen.filter(stoel => this.isBeschikbaar(gebouw, stoel));
     const aantalStoelenBeschikbaar = beschikbareStoelen.length;
 
-    const rijen = [...gebouw.stoelen.map(value => value.rij), ...gebouw.props.map(value => value.rij)]
-      .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
-    const kolommen = [...gebouw.stoelen.map(value => value.kolom), ...gebouw.props.map(value => value.kolom)]
-      .reduce((previousValue, currentValue) => previousValue < currentValue ? currentValue : previousValue, 0);
+    const rijen = [...gebouw.stoelen.map(value => value.rij), ...gebouw.props.map(value => value.rij)].reduce(
+      (previousValue, currentValue) => (previousValue < currentValue ? currentValue : previousValue),
+      0
+    );
+    const kolommen = [...gebouw.stoelen.map(value => value.kolom), ...gebouw.props.map(value => value.kolom)].reduce(
+      (previousValue, currentValue) => (previousValue < currentValue ? currentValue : previousValue),
+      0
+    );
     const cellSize = css`min(80vh / ${rijen}, (100vw - 570px) / ${kolommen})`;
 
     return html`
       <div>
         <div id="gebouw" style="display: grid; grid-template-rows: repeat(${rijen}, ${cellSize}); grid-template-columns: repeat(${kolommen}, ${cellSize});">
-
-          ${gebouw.props.map(prop => html`
-            <div style="grid-row: ${prop.rij}; grid-column: ${prop.kolom}; background-color: ${prop.kleur}"></div>`)}
-
+          ${gebouw.props.map(prop => html` <div style="grid-row: ${prop.rij}; grid-column: ${prop.kolom}; background-color: ${prop.kleur}"></div>`)}
           ${gebouw.stoelen.map((stoel, index) => {
             const genodigde = this.findGenodigde(stoel);
             const rotation = toCssRotation(stoel.richting);
@@ -260,22 +283,24 @@ export class KerkPlanning extends LitElement {
               title = 'Beschikbaar';
               beschikbaar = true;
             }
-            return html`<img src="https://upload.wikimedia.org/wikipedia/commons/3/36/Font_Awesome_5_solid_chair.svg"
-                             class="stoel"
-                             draggable="${draggable}"
-                             data-stoel-index="${index}"
-                             data-deelnemer-email="${genodigde ? genodigde.email : ''}"
-                             title="${title}"
-                             style="grid-row: ${stoel.rij}; grid-column: ${stoel.kolom}; transform: rotate(${rotation}); ${styling}"
-                             ondragover="return ${!beschikbaar}"
-                             @dragstart="${this._drag}"
-                             @drop="${this._drop}"/>`;
+            return html`<img
+              src="https://upload.wikimedia.org/wikipedia/commons/3/36/Font_Awesome_5_solid_chair.svg"
+              class="stoel"
+              draggable="${draggable}"
+              data-stoel-index="${index}"
+              data-deelnemer-email="${genodigde ? genodigde.email : ''}"
+              title="${title}"
+              style="grid-row: ${stoel.rij}; grid-column: ${stoel.kolom}; transform: rotate(${rotation}); ${styling}"
+              ondragover="return ${!beschikbaar}"
+              @dragstart="${this._drag}"
+              @drop="${this._drop}"
+            />`;
           })}
         </div>
         <div id="controls">
-          <div>Aantal plekken:<br/>${aantalStoelen}</div>
-          <div>Plekken beschikbaar:<br/>${aantalStoelenBeschikbaar}</div>
-          <div>Plekken ingepland:<br/>${aantalStoelenIngepland}</div>
+          <div>Aantal plekken:<br />${aantalStoelen}</div>
+          <div>Plekken beschikbaar:<br />${aantalStoelenBeschikbaar}</div>
+          <div>Plekken ingepland:<br />${aantalStoelenIngepland}</div>
         </div>
       </div>
     `;
@@ -286,9 +311,9 @@ export class KerkPlanning extends LitElement {
     if (!el || !el.getAttribute) {
       return;
     }
-    const deelnemerEmail = el.getAttribute("data-deelnemer-email");
+    const deelnemerEmail = el.getAttribute('data-deelnemer-email');
     if (!deelnemerEmail) {
-      console.log("Deelnemer email niet gevonden!");
+      console.log('Deelnemer email niet gevonden!');
       return;
     }
 
@@ -304,40 +329,40 @@ export class KerkPlanning extends LitElement {
     if (!el || !el.getAttribute) {
       return;
     }
-    const stoelIndexStr = el.getAttribute("data-stoel-index");
+    const stoelIndexStr = el.getAttribute('data-stoel-index');
     if (!stoelIndexStr) {
-      console.log("Stoel index niet gevonden!");
+      console.log('Stoel index niet gevonden!');
       return;
     }
 
     const deelnemerEmail = event.dataTransfer?.getData('text/plain');
     if (!deelnemerEmail) {
-      console.log("Deelnemer email niet gevonden!");
+      console.log('Deelnemer email niet gevonden!');
       return;
     }
 
-    const gebouw = this.huidigGebouw()
+    const gebouw = this.huidigGebouw();
     if (!gebouw) {
-      console.log("Gebouw niet gevonden!");
+      console.log('Gebouw niet gevonden!');
       return;
     }
 
     const stoelIndex = parseInt(stoelIndexStr);
     const stoel = gebouw.stoelen[stoelIndex];
     if (!stoel) {
-      console.log("Stoel niet gevonden!");
+      console.log('Stoel niet gevonden!');
       return;
     }
 
     const deelnemer = this.findDeelnemer(deelnemerEmail);
     if (!deelnemer) {
-      console.log("Deelnemer niet gevonden!");
+      console.log('Deelnemer niet gevonden!');
       return;
     }
 
     const opgave = this.findOpgave(deelnemer);
     if (!opgave) {
-      console.log("Opgave niet gevonden!");
+      console.log('Opgave niet gevonden!');
       return;
     }
 
@@ -355,7 +380,7 @@ export class KerkPlanning extends LitElement {
         aantal: aantalStoelenNodig,
         email: deelnemer.email,
         ingang: bepaalIngang(gebouw, gevondenStoelen[0]),
-        stoelen: gevondenStoelen
+        stoelen: gevondenStoelen,
       };
       this.genodigden = [...this.genodigden.filter(value => value.email != deelnemerEmail), genodigde];
     }
@@ -366,14 +391,14 @@ export class KerkPlanning extends LitElement {
       datum: this.datum,
       tijd: this.tijd,
       dienst: this.dienst,
-      genodigden: this.genodigden
+      genodigden: this.genodigden,
     };
   }
 
   _reset(event: DragEvent) {
     const deelnemerEmail = event.dataTransfer?.getData('text/plain');
     if (!deelnemerEmail) {
-      console.log("Deelnemer email niet gevonden!");
+      console.log('Deelnemer email niet gevonden!');
       return;
     }
 
@@ -388,7 +413,7 @@ export class KerkPlanning extends LitElement {
   _downloadPlanning(event: Event) {
     event.preventDefault();
     const planning = this._planning();
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURI(JSON.stringify(planning)));
     link.setAttribute('download', `planning ${this.datum} ${this.dienst}.json`);
     link.click(); // This will download the JSON file
@@ -396,10 +421,9 @@ export class KerkPlanning extends LitElement {
 
   _downloadLijst(event: Event) {
     event.preventDefault();
-    const rows = this.genodigden.sort((a, b) => a.ingang.localeCompare(b.ingang))
-      .map(value => [value.ingang, value.naam, value.aantal, value.email]);
-    const csvContent = `Genodigden ${this.dienst} op ${this.datum}\nIngang;Naam;Aantal;Email\n` + rows.map(e => e.join(";")).join("\n");
-    const link = document.createElement("a");
+    const rows = this.genodigden.sort((a, b) => a.ingang.localeCompare(b.ingang)).map(value => [value.ingang, value.naam, value.aantal, value.email]);
+    const csvContent = `Genodigden ${this.dienst} op ${this.datum}\nIngang;Naam;Aantal;Email\n` + rows.map(e => e.join(';')).join('\n');
+    const link = document.createElement('a');
     link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURI(csvContent));
     link.setAttribute('download', `genodigden ${this.datum} ${this.dienst}.csv`);
     link.click(); // This will download the CSV file
@@ -415,11 +439,12 @@ export class KerkPlanning extends LitElement {
         deelnemers.forEach(deelnemer =>
           deelnemer.opgaven.forEach(opgave => {
             if (opgave && !diensten.includes(opgave.dienst)) diensten.push(opgave.dienst);
-          }));
+          })
+        );
         this.deelnemers = deelnemers;
         this.diensten = diensten;
       } else {
-        console.log("Lijst met deelnemers is leeg");
+        console.log('Lijst met deelnemers is leeg');
         this.deelnemers = [];
         this.diensten = [];
       }
@@ -434,7 +459,7 @@ export class KerkPlanning extends LitElement {
         console.log(`Lijst opgehaald met ${gebouwen.length} gebouwen`);
         this.gebouwen = gebouwen;
       } else {
-        console.log("Lijst met gebouwen is leeg");
+        console.log('Lijst met gebouwen is leeg');
         this.gebouwen = [];
       }
     });
@@ -502,7 +527,7 @@ export class KerkPlanning extends LitElement {
   }
 
   protected update(changedProperties: PropertyValues) {
-    super.update(changedProperties)
+    super.update(changedProperties);
 
     if (changedProperties.has('dienst') || changedProperties.has('datum')) {
       this.tijd = this.bepaalStarttijd();
@@ -530,10 +555,10 @@ export class KerkPlanning extends LitElement {
   private findUitnodiging(email: string): Uitnodiging | undefined {
     const diensten: string[] = [];
     diensten.push(this.dienst);
-    if (this.dienst.startsWith("Middagdienst")) {
-      diensten.push(this.dienst.replace("Middagdienst", "Middag- of Avonddienst"))
-    } else if (this.dienst.startsWith("Avonddienst")) {
-      diensten.push(this.dienst.replace("Avonddienst", "Middag- of Avonddienst"))
+    if (this.dienst.startsWith('Middagdienst')) {
+      diensten.push(this.dienst.replace('Middagdienst', 'Middag- of Avonddienst'));
+    } else if (this.dienst.startsWith('Avonddienst')) {
+      diensten.push(this.dienst.replace('Avonddienst', 'Middag- of Avonddienst'));
     }
 
     return this.findDeelnemer(email)?.uitnodigingen?.find(value => value.datum == this.datum && diensten.includes(value.dienst));
@@ -563,16 +588,17 @@ export class KerkPlanning extends LitElement {
     return !ingeplandeStoelen.some(stoelen => isOnbeschikbaar(stoel, stoelen));
   }
 
-  private laatsteUitnodiging(deelnemer: Deelnemer): Uitnodiging | undefined {
+  private laatsteUitnodiging(deelnemer: Deelnemer, inclusiefAfmeldingen: boolean): Uitnodiging | undefined {
     const isBijbellezing = this.dienst.toLowerCase().includes('bijbellezing');
     const uitnodigingen = deelnemer.uitnodigingen
-      .filter(value => value.status !== 'NO')
+      .filter(value => inclusiefAfmeldingen || value.status !== 'NO')
       .filter(value => {
         const b = value.dienst.toLowerCase().includes('bijbellezing');
         return isBijbellezing ? b : !b;
       });
-    return uitnodigingen.length == 0 ? undefined :
-      uitnodigingen.reduce((previousValue, currentValue) => new Date(previousValue.datum) > new Date(currentValue.datum) ? previousValue : currentValue);
+    return uitnodigingen.length == 0
+      ? undefined
+      : uitnodigingen.reduce((previousValue, currentValue) => (new Date(previousValue.datum) > new Date(currentValue.datum) ? previousValue : currentValue));
   }
 
   private huidigGebouw(): Gebouw | undefined {
@@ -582,16 +608,16 @@ export class KerkPlanning extends LitElement {
 
   private bepaalStarttijd(): string {
     const dienst = this.dienst.toLowerCase();
-    if (dienst.includes("bijbellezing")) {
-      return "19:30";
-    } else if (dienst.includes("sing-in")) {
-      return "19:30";
-    } else if (dienst.includes("ochtend")) {
-      return "09:30";
-    } else if ((dienst.includes("middag") && !dienst.includes("avond")) || (dienst.includes("middag") && dienst.includes("avond") && isTussenDankdagEnBiddag(this.datum))) {
-      return "15:30";
-    } else if ((!dienst.includes("middag") && dienst.includes("avond")) || (dienst.includes("middag") && dienst.includes("avond") && isTussenBiddagEnDankdag(this.datum))) {
-      return "19:00";
+    if (dienst.includes('bijbellezing')) {
+      return '19:30';
+    } else if (dienst.includes('sing-in')) {
+      return '19:30';
+    } else if (dienst.includes('ochtend')) {
+      return '09:30';
+    } else if ((dienst.includes('middag') && !dienst.includes('avond')) || (dienst.includes('middag') && dienst.includes('avond') && isTussenDankdagEnBiddag(this.datum))) {
+      return '15:30';
+    } else if ((!dienst.includes('middag') && dienst.includes('avond')) || (dienst.includes('middag') && dienst.includes('avond') && isTussenBiddagEnDankdag(this.datum))) {
+      return '19:00';
     } else {
       return this.tijd;
     }
@@ -602,8 +628,8 @@ export class KerkPlanning extends LitElement {
   }
 
   private compareDeelnemer(a: Deelnemer, b: Deelnemer): number {
-    const al = this.laatsteUitnodiging(a);
-    const ab = this.laatsteUitnodiging(b);
+    const al = this.laatsteUitnodiging(a, false);
+    const ab = this.laatsteUitnodiging(b, false);
     if (al == undefined && ab == undefined) {
       return 0;
     } else if (al == undefined) {
