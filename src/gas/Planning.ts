@@ -1,4 +1,5 @@
 import { Genodigde, Planning } from '../common/Model';
+import { isoDateString } from './Common';
 import Spreadsheet = GoogleAppsScript.Spreadsheet.Spreadsheet;
 
 function createDescriptionDutch(dienst: string, openingsTijd: Date, genodigde: Genodigde): string {
@@ -123,14 +124,13 @@ function verstuurUitnodiging(genodigde: Genodigde, datum: string, dienst: string
 function verwerkVerwijderdeGenodigden(datum: string, dienst: string, verwijderdeGenodigden: string[], spreadsheet: Spreadsheet) {
   const range = spreadsheet.getDataRange();
   range.getValues().forEach((value, index) => {
-    const datumValue = value[0];
-    const datumString = datumValue instanceof Date ? datumValue.toISOString().substring(0, 10) : datumValue.toString();
+    const datumValue = isoDateString(value[0]);
     const dienstValue = value[1] as string;
     const email = value[2] as string;
     if (verwijderdeGenodigden.includes(email)) {
-      console.log(`Checking row ${index} with ${datumString} ${dienstValue} ${email} against ${datum} ${dienst}`);
+      console.log(`Checking row ${index} with ${datumValue} ${dienstValue} ${email} against ${datum} ${dienst}`);
     }
-    if (datumString == datum && dienstValue == dienst && verwijderdeGenodigden.includes(email)) {
+    if (datumValue == datum && dienstValue == dienst && verwijderdeGenodigden.includes(email)) {
       console.log(`Marking row ${index} (${email}) as 'NO'`);
       range.getCell(index + 1, 3).setValue('NO');
     }
