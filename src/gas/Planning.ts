@@ -2,6 +2,9 @@ import { Genodigde, Planning } from '../common/Model';
 import Spreadsheet = GoogleAppsScript.Spreadsheet.Spreadsheet;
 import Sheet = GoogleAppsScript.Spreadsheet.Sheet;
 
+const planningenFolder = DriveApp.getFoldersByName('Planningen').next();
+const genodigdenFolder = DriveApp.getFoldersByName('Genodigden').next();
+
 function createDescriptionDutch(dienst: string, openingsTijd: Date, genodigde: Genodigde): string {
   const datum = openingsTijd.toLocaleString('nl', { day: 'numeric', month: 'long', year: 'numeric' });
   const tijdstip = openingsTijd.toLocaleString('nl', { hour: 'numeric', minute: 'numeric' });
@@ -69,8 +72,7 @@ Hervormde Gemeente Genemuiden`;
 }
 
 function getPlanning(datum: string, dienst: string): Planning | undefined {
-  const filename = `planning ${datum} ${dienst}.json`;
-  const iterator = DriveApp.getFilesByName(filename);
+  const iterator = planningenFolder.getFilesByName(`planning ${datum} ${dienst}.json`);
   if (iterator.hasNext()) {
     const file = iterator.next();
     const json = file.getBlob().getDataAsString();
@@ -81,23 +83,28 @@ function getPlanning(datum: string, dienst: string): Planning | undefined {
 
 function opslaan(planning: Planning) {
   const filename = `planning ${planning.datum} ${planning.dienst}.json`;
-  const iterator = DriveApp.getFilesByName(filename);
+  const iterator = planningenFolder.getFilesByName(filename);
   if (iterator.hasNext()) {
     const f = iterator.next();
     f.setContent(JSON.stringify(planning));
   } else {
-    DriveApp.createFile(filename, JSON.stringify(planning), 'application/json');
+    planningenFolder.createFile(filename, JSON.stringify(planning), 'application/json');
   }
 }
 
 function maakGenodigdenSpreadsheet(planning: Planning) {
   const filename = `genodigden ${planning.datum} ${planning.dienst}`;
-  const iterator = DriveApp.getFilesByName(filename);
+  const iterator = genodigdenFolder.getFilesByName(filename);
   if (iterator.hasNext()) {
     const file = iterator.next();
     file.setTrashed(true);
   }
+
   const spreadsheet = SpreadsheetApp.create(filename);
+  const file = DriveApp.getFileById(spreadsheet.getId());
+  genodigdenFolder.addFile(file);
+  DriveApp.removeFile(file);
+
   spreadsheet.appendRow([`Genodigden ${planning.dienst} op ${planning.datum}`]);
   spreadsheet.getRange('A1:D1').merge();
   spreadsheet.appendRow(['Ingang', 'Naam', 'Aantal', 'Email']);
@@ -112,11 +119,8 @@ function verstuurUitnodiging(genodigde: Genodigde, dienst: string, openingsTijd:
   const engelsen = ['michalnawrocki1992@gmail.com'];
   const title = `Uitnodiging ${dienst}`;
   const description = engelsen.includes(genodigde.email) ? createDescriptionEnglish(dienst, openingsTijd, genodigde) : createDescriptionDutch(dienst, openingsTijd, genodigde);
-  MailApp.sendEmail({
-    subject: title,
-    to: genodigde.email,
-    body: description,
-  });
+  // GmailApp.createDraft(genodigde.email, title, description);
+  MailApp.sendEmail(genodigde.email, title, description);
   sheet.appendRow([dienst, genodigde.email, 'INVITED']);
   Logger.log(`${title} verstuurd naar ${genodigde.email} (resterende quota: ${MailApp.getRemainingDailyQuota()})`);
 }
@@ -127,12 +131,9 @@ function verwerkVerwijderdeGenodigden(dienst: string, verwijderdeGenodigden: str
     const row = index + 1;
     const dienstValue = value[0] as string;
     const email = value[1] as string;
-    if (verwijderdeGenodigden.includes(email)) {
-      console.log(`Checking row ${row} of ${email} with ${dienstValue} against ${dienst}`);
-    }
     if (dienstValue == dienst && verwijderdeGenodigden.includes(email)) {
       console.log(`Marking row ${row} (${email}) as 'NO'`);
-      range.getCell(row, 2).setValue('NO');
+      range.getCell(row, 3).setValue('NO');
     }
   });
 }
@@ -155,6 +156,7 @@ function uitnodigen(planning: Planning): number {
   } else {
     spreadsheet = SpreadsheetApp.create(filename);
   }
+
   let sheet: Sheet;
   const sheetOrNull = spreadsheet.getSheetByName(planning.datum);
   if (sheetOrNull) {
