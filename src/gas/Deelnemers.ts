@@ -25,35 +25,33 @@ function createDeelnemer(row: any[], headerRow: string[]): Deelnemer {
 }
 
 function uitnodigingenAanvullen(deelnemers: Deelnemer[]) {
-  const filename = `Genodigden`;
-  const iterator = DriveApp.getFilesByName(filename);
-  if (iterator.hasNext()) {
-    const file = iterator.next();
-    const spreadsheet = SpreadsheetApp.open(file);
-    spreadsheet.getSheets().forEach(sheet => {
-      const datum = sheet.getName();
-      sheet
-        .getDataRange()
-        .getValues()
-        .forEach(value => {
-          const dienst = value[0] as string;
-          const email = value[1] as string;
-          const status = value[2] as string;
-          const deelnemer = deelnemers.find(deelnemer => deelnemer.email === email);
-          if (deelnemer) {
-            deelnemer.uitnodigingen.push({
-              datum: datum,
-              dienst: dienst,
-              status: status,
-            });
-          }
-        });
-    });
-  }
+  const file = DriveApp.getFilesByName(`Genodigden`).next();
+  const spreadsheet = SpreadsheetApp.open(file);
+  spreadsheet.getSheets().forEach(sheet => {
+    const datum = sheet.getName();
+    sheet
+      .getDataRange()
+      .getValues()
+      .forEach(value => {
+        const dienst = value[0] as string;
+        const email = value[1] as string;
+        const status = value[2] as string;
+        const deelnemer = deelnemers.find(deelnemer => deelnemer.email === email);
+        if (deelnemer) {
+          deelnemer.uitnodigingen.push({
+            datum: datum,
+            dienst: dienst,
+            status: status,
+          });
+        }
+      });
+  });
 }
 
 function getDeelnemers(): Deelnemer[] {
-  const sheet = SpreadsheetApp.getActiveSheet();
+  const file = DriveApp.getFilesByName(`Aanmeldingen`).next();
+  const spreadsheet = SpreadsheetApp.open(file);
+  const sheet = spreadsheet.getActiveSheet();
   const rows = sheet.getDataRange().getValues();
   const headerRow = rows[0];
   let deelnemers: Deelnemer[] = [];

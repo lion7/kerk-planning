@@ -1,5 +1,5 @@
-import {Beschikbaarheid, Gebouw, Ingang, Prop, Richting, Stoel} from "../common/Model";
-import {bepaalRichting} from "../common/Util";
+import { Beschikbaarheid, Gebouw, Ingang, Prop, Richting, Stoel } from '../common/Model';
+import { bepaalRichting } from '../common/Util';
 
 interface GebouwIngang extends Ingang {
   gebouw: string;
@@ -9,10 +9,10 @@ function createIngang(row: any[]): GebouwIngang {
   const gebouw = row[0];
   const naam = row[1];
   const richting = bepaalRichting(row[2]);
-  const vanRij = typeof row[3] == "number" ? row[3] : undefined;
-  const totRij = typeof row[4] == "number" ? row[4] : undefined;
-  const vanKolom = typeof row[5] == "number" ? row[5] : undefined;
-  const totKolom = typeof row[6] == "number" ? row[6] : undefined;
+  const vanRij = typeof row[3] == 'number' ? row[3] : undefined;
+  const totRij = typeof row[4] == 'number' ? row[4] : undefined;
+  const vanKolom = typeof row[5] == 'number' ? row[5] : undefined;
+  const totKolom = typeof row[6] == 'number' ? row[6] : undefined;
   return {
     gebouw: gebouw,
     naam: naam,
@@ -20,7 +20,7 @@ function createIngang(row: any[]): GebouwIngang {
     vanRij: vanRij,
     totRij: totRij,
     vanKolom: vanKolom,
-    totKolom: totKolom
+    totKolom: totKolom,
   };
 }
 
@@ -66,13 +66,13 @@ function createGebouw(sheet: GoogleAppsScript.Spreadsheet.Sheet, ingangen: Gebou
           rij: rij + 1,
           kolom: kolom + 1,
           richting: richting ? richting : Richting.Noord,
-          beschikbaarheid: beschikbaarheid
+          beschikbaarheid: beschikbaarheid,
         });
       } else if (bg && bg != '#ffffff') {
         props.push({
           rij: rij + 1,
           kolom: kolom + 1,
-          kleur: bg
+          kleur: bg,
         });
       }
     }
@@ -81,7 +81,7 @@ function createGebouw(sheet: GoogleAppsScript.Spreadsheet.Sheet, ingangen: Gebou
     naam: naam,
     ingangen: ingangen.filter(v => v.gebouw == naam),
     stoelen: stoelen,
-    props: props
+    props: props,
   };
 }
 
@@ -93,14 +93,15 @@ function getGebouwen(): Gebouw[] {
     const json = file.getBlob().getDataAsString();
     return JSON.parse(json);
   } else {
-    const spreadsheet = SpreadsheetApp.openById('1FPTrd515HQUC0LXMBU4qUUNzKfc80bi7VXOxjOhWffg');
+    const file = DriveApp.getFilesByName('Indeling kerk').next();
+    const spreadsheet = SpreadsheetApp.open(file);
     const ingangen = getIngangen(spreadsheet);
     const sheets = spreadsheet.getSheets();
     const gebouwen: Gebouw[] = [];
     for (let i = 1; i < sheets.length; i++) {
       gebouwen.push(createGebouw(sheets[i], ingangen));
     }
-    DriveApp.createFile(filename, JSON.stringify(gebouwen), "application/json");
+    DriveApp.createFile(filename, JSON.stringify(gebouwen), 'application/json');
     return gebouwen;
   }
 }

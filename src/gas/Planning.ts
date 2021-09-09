@@ -179,11 +179,11 @@ function uitnodigen(planning: Planning): number {
   console.log(`Toegevoegde genodigden: ${toegevoegdeGenodigden}`);
 
   opslaan(planning);
+  verwerkVerwijderdeGenodigden(planning.dienst, verwijderdeGenodigden, sheet);
   maakGenodigdenSpreadsheet(planning);
   planning.genodigden
     .filter(genodigde => toegevoegdeGenodigden.includes(genodigde.email))
     .forEach(genodigde => verstuurUitnodiging(genodigde, planning.dienst, openingsTijd, sheet));
-  verwerkVerwijderdeGenodigden(planning.dienst, verwijderdeGenodigden, sheet);
 
   return toegevoegdeGenodigden.length;
 }
