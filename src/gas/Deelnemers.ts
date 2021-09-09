@@ -25,8 +25,7 @@ function createDeelnemer(row: any[], headerRow: string[]): Deelnemer {
 }
 
 function uitnodigingenAanvullen(deelnemers: Deelnemer[]) {
-  const file = DriveApp.getFilesByName(`Genodigden`).next();
-  const spreadsheet = SpreadsheetApp.open(file);
+  const spreadsheet = SpreadsheetApp.openById('1NCc8xYNI1XABRwzK8jZkbaWsYi9KvWFt7bfjUd1xg-M'); // Genodigden
   spreadsheet.getSheets().forEach(sheet => {
     const datum = sheet.getName();
     sheet
@@ -49,8 +48,7 @@ function uitnodigingenAanvullen(deelnemers: Deelnemer[]) {
 }
 
 function getDeelnemers(): Deelnemer[] {
-  const file = DriveApp.getFilesByName(`Aanmeldingen`).next();
-  const spreadsheet = SpreadsheetApp.open(file);
+  const spreadsheet = SpreadsheetApp.openById('1zHs5BUWwKqK0f3nyDqA_DMGny471VrNh3OQkXoo33TE'); // Aanmeldingen
   const sheet = spreadsheet.getActiveSheet();
   const rows = sheet.getDataRange().getValues();
   const headerRow = rows[0];

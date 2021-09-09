@@ -2,8 +2,8 @@ import { Genodigde, Planning } from '../common/Model';
 import Spreadsheet = GoogleAppsScript.Spreadsheet.Spreadsheet;
 import Sheet = GoogleAppsScript.Spreadsheet.Sheet;
 
-const planningenFolder = DriveApp.getFoldersByName('Planningen').next();
-const genodigdenFolder = DriveApp.getFoldersByName('Genodigden').next();
+const planningenFolder = DriveApp.getFolderById('16e3f4M8OIVj2SzYiKWQIuKbfbTLRz4P6');
+const genodigdenFolder = DriveApp.getFolderById('1LrC7sKphoZWKEj-hPGGxk2XFw2Uc8QB1');
 
 function createDescriptionDutch(dienst: string, openingsTijd: Date, genodigde: Genodigde): string {
   const datum = openingsTijd.toLocaleString('nl', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -184,6 +184,8 @@ function uitnodigen(planning: Planning): number {
   planning.genodigden
     .filter(genodigde => toegevoegdeGenodigden.includes(genodigde.email))
     .forEach(genodigde => verstuurUitnodiging(genodigde, planning.dienst, openingsTijd, sheet));
+
+  console.log(`${toegevoegdeGenodigden.length} uitnodigingen verstuurd voor ${planning.datum} ${planning.dienst}`);
 
   return toegevoegdeGenodigden.length;
 }

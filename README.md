@@ -2,6 +2,10 @@
 
 This webcomponent follows the [open-wc](https://github.com/open-wc/open-wc) recommendation.
 
+# Manifest documentation
+
+https://developers.google.com/apps-script/api/reference/rest/v1/projects.deployments#access
+
 ## Installation
 ```bash
 npm i kerk-planning

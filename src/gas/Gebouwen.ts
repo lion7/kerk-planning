@@ -93,8 +93,7 @@ function getGebouwen(): Gebouw[] {
     const json = file.getBlob().getDataAsString();
     return JSON.parse(json);
   } else {
-    const file = DriveApp.getFilesByName('Indeling kerk').next();
-    const spreadsheet = SpreadsheetApp.open(file);
+    const spreadsheet = SpreadsheetApp.openById('1ZJzzyg97gv5h3x3R8FOng3wKj-EfMb4O1NUp-yZU2yQ'); // Indeling kerk
     const ingangen = getIngangen(spreadsheet);
     const sheets = spreadsheet.getSheets();
     const gebouwen: Gebouw[] = [];
