@@ -1,5 +1,4 @@
 import { Deelnemer, Opgave } from '../common/Model';
-import { isoDateString } from './Common';
 
 function createDeelnemer(row: any[], headerRow: string[]): Deelnemer {
   const opgaven: Opgave[] = [];
@@ -31,23 +30,25 @@ function uitnodigingenAanvullen(deelnemers: Deelnemer[]) {
   if (iterator.hasNext()) {
     const file = iterator.next();
     const spreadsheet = SpreadsheetApp.open(file);
-    spreadsheet
-      .getDataRange()
-      .getValues()
-      .forEach(value => {
-        const datum = isoDateString(value[0]);
-        const dienst = value[1] as string;
-        const email = value[2] as string;
-        const status = value[3] as string;
-        const deelnemer = deelnemers.find(deelnemer => deelnemer.email === email);
-        if (deelnemer) {
-          deelnemer.uitnodigingen.push({
-            datum: datum,
-            dienst: dienst,
-            status: status,
-          });
-        }
-      });
+    spreadsheet.getSheets().forEach(sheet => {
+      const datum = sheet.getName();
+      sheet
+        .getDataRange()
+        .getValues()
+        .forEach(value => {
+          const dienst = value[0] as string;
+          const email = value[1] as string;
+          const status = value[2] as string;
+          const deelnemer = deelnemers.find(deelnemer => deelnemer.email === email);
+          if (deelnemer) {
+            deelnemer.uitnodigingen.push({
+              datum: datum,
+              dienst: dienst,
+              status: status,
+            });
+          }
+        });
+    });
   }
 }
 

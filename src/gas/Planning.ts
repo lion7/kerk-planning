@@ -1,6 +1,6 @@
 import { Genodigde, Planning } from '../common/Model';
-import { isoDateString } from './Common';
 import Spreadsheet = GoogleAppsScript.Spreadsheet.Spreadsheet;
+import Sheet = GoogleAppsScript.Spreadsheet.Sheet;
 
 function createDescriptionDutch(dienst: string, openingsTijd: Date, genodigde: Genodigde): string {
   const datum = openingsTijd.toLocaleString('nl', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -108,7 +108,7 @@ function maakGenodigdenSpreadsheet(planning: Planning) {
   spreadsheet.getActiveSheet().autoResizeColumns(1, spreadsheet.getLastColumn());
 }
 
-function verstuurUitnodiging(genodigde: Genodigde, datum: string, dienst: string, openingsTijd: Date, spreadsheet: Spreadsheet) {
+function verstuurUitnodiging(genodigde: Genodigde, dienst: string, openingsTijd: Date, sheet: Sheet) {
   const engelsen = ['michalnawrocki1992@gmail.com'];
   const title = `Uitnodiging ${dienst}`;
   const description = engelsen.includes(genodigde.email) ? createDescriptionEnglish(dienst, openingsTijd, genodigde) : createDescriptionDutch(dienst, openingsTijd, genodigde);
@@ -117,22 +117,22 @@ function verstuurUitnodiging(genodigde: Genodigde, datum: string, dienst: string
     to: genodigde.email,
     body: description,
   });
-  spreadsheet.appendRow([datum, dienst, genodigde.email, 'INVITED']);
+  sheet.appendRow([dienst, genodigde.email, 'INVITED']);
   Logger.log(`${title} verstuurd naar ${genodigde.email} (resterende quota: ${MailApp.getRemainingDailyQuota()})`);
 }
 
-function verwerkVerwijderdeGenodigden(datum: string, dienst: string, verwijderdeGenodigden: string[], spreadsheet: Spreadsheet) {
-  const range = spreadsheet.getDataRange();
+function verwerkVerwijderdeGenodigden(dienst: string, verwijderdeGenodigden: string[], sheet: Sheet) {
+  const range = sheet.getDataRange();
   range.getValues().forEach((value, index) => {
-    const datumValue = isoDateString(value[0]);
-    const dienstValue = value[1] as string;
-    const email = value[2] as string;
+    const row = index + 1;
+    const dienstValue = value[0] as string;
+    const email = value[1] as string;
     if (verwijderdeGenodigden.includes(email)) {
-      console.log(`Checking row ${index} with ${datumValue} ${dienstValue} ${email} against ${datum} ${dienst}`);
+      console.log(`Checking row ${row} of ${email} with ${dienstValue} against ${dienst}`);
     }
-    if (datumValue == datum && dienstValue == dienst && verwijderdeGenodigden.includes(email)) {
-      console.log(`Marking row ${index} (${email}) as 'NO'`);
-      range.getCell(index + 1, 3).setValue('NO');
+    if (dienstValue == dienst && verwijderdeGenodigden.includes(email)) {
+      console.log(`Marking row ${row} (${email}) as 'NO'`);
+      range.getCell(row, 2).setValue('NO');
     }
   });
 }
@@ -140,7 +140,6 @@ function verwerkVerwijderdeGenodigden(datum: string, dienst: string, verwijderde
 function uitnodigen(planning: Planning): number {
   console.log(`Uitnodigingen versturen voor ${planning.datum} ${planning.dienst}`);
 
-  const oudePlanning = getPlanning(planning.datum, planning.dienst);
   const startTijd = new Date(`${planning.datum}T${planning.tijd}`);
   const openingsTijd = new Date(startTijd);
   const eindTijd = new Date(startTijd);
@@ -156,8 +155,20 @@ function uitnodigen(planning: Planning): number {
   } else {
     spreadsheet = SpreadsheetApp.create(filename);
   }
+  let sheet: Sheet;
+  const sheetOrNull = spreadsheet.getSheetByName(planning.datum);
+  if (sheetOrNull) {
+    sheet = sheetOrNull;
+  } else {
+    sheet = spreadsheet.insertSheet();
+    sheet.setName(planning.datum);
+  }
 
-  const reedsGenodigden = oudePlanning ? oudePlanning.genodigden.filter(genodigde => genodigde?.email).map(genodigde => genodigde.email) : [];
+  const reedsGenodigden = sheet
+    .getDataRange()
+    .getValues()
+    .filter(value => value[0] == planning.dienst)
+    .map(value => value[1] as string);
   const nieuwGenodigden = planning.genodigden.filter(genodigde => genodigde?.email).map(genodigde => genodigde.email);
   const verwijderdeGenodigden = reedsGenodigden.filter(email => !nieuwGenodigden.includes(email));
   const toegevoegdeGenodigden = nieuwGenodigden.filter(email => !reedsGenodigden.includes(email));
@@ -169,8 +180,8 @@ function uitnodigen(planning: Planning): number {
   maakGenodigdenSpreadsheet(planning);
   planning.genodigden
     .filter(genodigde => toegevoegdeGenodigden.includes(genodigde.email))
-    .forEach(genodigde => verstuurUitnodiging(genodigde, planning.datum, planning.dienst, openingsTijd, spreadsheet));
-  verwerkVerwijderdeGenodigden(planning.datum, planning.dienst, verwijderdeGenodigden, spreadsheet);
+    .forEach(genodigde => verstuurUitnodiging(genodigde, planning.dienst, openingsTijd, sheet));
+  verwerkVerwijderdeGenodigden(planning.dienst, verwijderdeGenodigden, sheet);
 
   return toegevoegdeGenodigden.length;
 }
