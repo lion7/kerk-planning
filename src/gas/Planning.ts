@@ -120,8 +120,9 @@ function verstuurUitnodiging(genodigde: Genodigde, dienst: string, openingsTijd:
   const title = `Uitnodiging ${dienst}`;
   const description = engelsen.includes(genodigde.email) ? createDescriptionEnglish(dienst, openingsTijd, genodigde) : createDescriptionDutch(dienst, openingsTijd, genodigde);
   // GmailApp.createDraft(genodigde.email, title, description);
-  MailApp.sendEmail(genodigde.email, title, description);
+  GmailApp.sendEmail(genodigde.email, title, description);
   sheet.appendRow([dienst, genodigde.email, 'INVITED']);
+  // Logger.log(`${title} concept aangemaakt voor ${genodigde.email}`);
   Logger.log(`${title} verstuurd naar ${genodigde.email} (resterende quota: ${MailApp.getRemainingDailyQuota()})`);
 }
 
