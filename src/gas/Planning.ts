@@ -136,7 +136,8 @@ function verwerkVerwijderdeGenodigden(dienst: string, verwijderdeGenodigden: str
     const row = index + 1;
     const dienstValue = value[0] as string;
     const email = value[1] as string;
-    if (dienstValue == dienst && verwijderdeGenodigden.includes(email)) {
+    const status = value[2] as string;
+    if (dienstValue == dienst && status !== 'NO' && verwijderdeGenodigden.includes(email)) {
       console.log(`Marking row ${row} (${email}) as 'NO'`);
       range.getCell(row, 3).setValue('NO');
     }
