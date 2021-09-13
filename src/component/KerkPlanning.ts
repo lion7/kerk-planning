@@ -60,6 +60,11 @@ export class KerkPlanning extends LitElement {
       color: white;
     }
 
+    .delete {
+      background-color: red;
+      color: white;
+    }
+
     .deelnemer {
       cursor: move;
     }
@@ -193,7 +198,8 @@ export class KerkPlanning extends LitElement {
             );
 
             let styling = '';
-            if (this.isGenodigde(deelnemer)) {
+            const isGenodigde = this.isGenodigde(deelnemer);
+            if (isGenodigde) {
               const status = deelnemer.uitnodigingen?.find(value => value.datum == this.datum && value.dienst == this.dienst)?.status;
               if (status === 'YES') {
                 styling = 'background-color: red';
@@ -220,7 +226,9 @@ export class KerkPlanning extends LitElement {
                 </ul></span
               >
               <mwc-icon slot="meta">filter_${aantal}</mwc-icon>
-              <mwc-icon slot="graphic" class="inverted">${aantal > 1 ? 'people' : 'person'}</mwc-icon>
+              ${isGenodigde
+                ? html` <mwc-icon slot="graphic" class="delete" data-deelnemer-email="${deelnemer.email}" @click="${this._remove}">delete</mwc-icon> `
+                : html` <mwc-icon slot="graphic" class="inverted">${aantal > 1 ? 'people' : 'person'}</mwc-icon> `}
             </mwc-list-item>`;
           })}
       </mwc-list>
@@ -400,7 +408,25 @@ export class KerkPlanning extends LitElement {
       return;
     }
 
-    this.genodigden = this.genodigden.filter(value => value.email != deelnemerEmail);
+    this._verwijderGenodigde(deelnemerEmail);
+  }
+
+  _remove(event: Event) {
+    const el = event.target as Element;
+    if (!el || !el.getAttribute) {
+      return;
+    }
+    const deelnemerEmail = el.getAttribute('data-deelnemer-email');
+    if (!deelnemerEmail) {
+      console.log('Deelnemer email niet gevonden!');
+      return;
+    }
+
+    this._verwijderGenodigde(deelnemerEmail);
+  }
+
+  _verwijderGenodigde(email: string) {
+    this.genodigden = this.genodigden.filter(value => value.email != email);
   }
 
   _resetPlanning(event: Event) {

@@ -122,10 +122,13 @@ function verstuurUitnodiging(genodigde: Genodigde, dienst: string, openingsTijd:
   const remainingMailQuota = MailApp.getRemainingDailyQuota();
   if (remainingMailQuota > 0) {
     GmailApp.sendEmail(genodigde.email, title, description);
-    Logger.log(`${title} verstuurd naar ${genodigde.email} (resterende quota: ${remainingMailQuota})`);
+    Logger.log(`${title} verstuurd naar ${genodigde.email} (resterende quota: ${remainingMailQuota - 1})`);
   } else {
     GmailApp.createDraft(genodigde.email, title, description);
     Logger.log(`${title} concept aangemaakt voor ${genodigde.email}`);
+  }
+  if (remainingMailQuota == 2) {
+    GmailApp.sendEmail('gdeleeuw7@gmail.com', 'Mail quota bereikt', 'Hoi Gerard,\n\nHet mail quota voor vandaag is op, verstuur de concepten handmatig!\n\nGroeten,\nKerkPlanning');
   }
   sheet.appendRow([dienst, genodigde.email, 'INVITED']);
 }
