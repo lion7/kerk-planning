@@ -220,11 +220,9 @@ export class KerkPlanning extends LitElement {
             >
               <span>${deelnemer.naam}</span>
               <span slot="secondary">${deelnemer.adres}, ${deelnemer.postcode} ${deelnemer.woonplaats}</span>
-              <span slot="secondary"
-                ><ul>
-                  ${uitnodigingen}
-                </ul></span
-              >
+              <ul slot="secondary">
+                ${uitnodigingen}
+              </ul>
               <mwc-icon slot="meta">filter_${aantal}</mwc-icon>
               ${isGenodigde
                 ? html` <mwc-icon slot="graphic" class="delete" data-deelnemer-email="${deelnemer.email}" @click="${this._remove}">delete</mwc-icon> `
@@ -671,9 +669,9 @@ export class KerkPlanning extends LitElement {
     if (al == undefined && ab == undefined) {
       return 0;
     } else if (al == undefined) {
-      return 1;
-    } else if (ab == undefined) {
       return -1;
+    } else if (ab == undefined) {
+      return 1;
     }
 
     let c = new Date(al.datum).getTime() - new Date(ab.datum).getTime();
