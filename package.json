@@ -33,7 +33,7 @@
     "lit-html": "^1.4.1"
   },
   "devDependencies": {
-    "@google/clasp": "^2.3.2",
+    "@google/clasp": "^2.4.2",
     "@open-wc/building-rollup": "^1.10.0",
     "@open-wc/eslint-config": "^2.0.0",
     "@types/google-apps-script": "^1.0.37",
